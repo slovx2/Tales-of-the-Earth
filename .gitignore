@@ -1,0 +1,64 @@
+# macOS
+.DS_Store
+
+# 本机文件与验收产物
+/.local/
+/Validation/
+/*.log
+
+# Unity 可重建目录
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Bb]uild/
+/[Bb]uilds/
+/MemoryCaptures/
+/Recordings/
+
+# Unity/IDE 生成文件
+/.vs/
+/.vscode/
+/.idea/
+*.csproj
+*.sln
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+*.unityproj
+*.unitypackage
+
+# Python 本地环境与缓存
+/.venv/
+__pycache__/
+*.py[cod]
+/.pytest_cache/
+/.mypy_cache/
+/.ruff_cache/
+/.env
+/.env.*
+!/.env.example
+
+# 离线管线可重建中间产物
+/Data/processed/
+/Data/raw/**/extracted/
+/Data/raw/gplates/Animations.zip
+
+# 离线管线可重建 Unity 资产
+/Assets/StreamingAssets/EarthGeometry/
+/Assets/StreamingAssets/EarthGeometry.meta
+/Assets/Textures/earth_modern*
+/Assets/Textures/paleo*/
+/Assets/Textures/paleo*.meta
+
+# 崩溃与性能诊断产物
+/sysinfo.txt
+*.stackdump
