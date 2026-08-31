@@ -1,6 +1,6 @@
 # Tales of the Earth
 
-Unity 3D 地球演化原型。运行时使用海洋球体和按时间读取的陆地几何网格；拖动底部时间轴可以在 `0–1000 Ma` 之间切换，当前数据口径为 `1 Ma/帧`、海岸线最大分段约 `25 km`。
+Unity 3D 地球演化原型。运行时使用海洋球体和按时间读取的陆地几何网格；拖动底部时间轴可以在 `0–1000 Ma` 之间切换，当前数据口径为 `1 Ma/帧`、海岸线最大分段约 `25 km`、大陆内部球面三角边最大约 `250 km`。
 
 ## 环境
 
@@ -25,7 +25,7 @@ uv sync --python 3.9.20
 
 ## 生成运行时几何
 
-下面的默认命令会生成 `1001` 帧、约 `2.2 GiB` 的二进制数据：
+下面的默认命令会生成 `1001` 帧二进制数据，实际体积记录在同名 JSON 元数据中：
 
 ```bash
 uv run python Tools/build_runtime_geometry.py
@@ -37,8 +37,12 @@ uv run python Tools/build_runtime_geometry.py
 uv run python Tools/build_runtime_geometry.py \
   --time-step-ma 1 \
   --coastline-km 25 \
+  --surface-km 250 \
   --max-time-ma 1000
 ```
+
+`--coastline-km` 控制海岸线边界采样；`--surface-km` 控制大陆内部球面三角网格。
+两者必须分开约束，否则只有边界足够细，横跨大陆的长三角形仍会沉入海洋球并在渲染时形成规则缺口。
 
 生成结果：
 

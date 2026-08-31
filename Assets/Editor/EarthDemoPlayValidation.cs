@@ -59,6 +59,9 @@ public static class EarthDemoPlayValidation
             Require(Mathf.Approximately(controller.CurrentTimeMa, 7f), "时间轴没有保持 1 Ma 精度");
             Require(Mathf.Approximately(controller.ActiveFrameTimeMa, 7f), "7 Ma 没有加载对应的 1 Ma 几何帧");
 
+            controller.SetTimeMa(0f);
+            CapturePlayFrame(Camera.main, ".local/validation/earth_dynamic_geometry_0000Ma.png");
+
             for (float timeMa = 0f; timeMa <= land.MaxTimeMa; timeMa += land.FrameResolutionMa)
             {
                 controller.SetTimeMa(timeMa);
@@ -71,7 +74,7 @@ public static class EarthDemoPlayValidation
             MeshFilter meshFilter = land.GetComponent<MeshFilter>();
             Require(meshFilter != null && meshFilter.sharedMesh != null, "运行时动态陆地 Mesh 无效");
             Require(meshFilter.sharedMesh.vertexCount == land.ActiveVertexCount, "运行时 Mesh 顶点数不同步");
-            CapturePlayFrame(Camera.main);
+            CapturePlayFrame(Camera.main, ".local/validation/earth_dynamic_geometry.png");
 
             controller.RotateByScreenDelta(new Vector2(700f, 0f));
             Quaternion beforeVerticalDrag = controller.transform.rotation;
@@ -95,7 +98,7 @@ public static class EarthDemoPlayValidation
         }
     }
 
-    private static void CapturePlayFrame(Camera camera)
+    private static void CapturePlayFrame(Camera camera, string outputPath)
     {
         Require(camera != null, "Play Mode 缺少主相机");
         RenderTexture target = new RenderTexture(1280, 720, 24, RenderTextureFormat.ARGB32);
@@ -105,8 +108,12 @@ public static class EarthDemoPlayValidation
         RenderTexture.active = target;
         screenshot.ReadPixels(new Rect(0, 0, 1280, 720), 0, 0);
         screenshot.Apply();
-        Directory.CreateDirectory(".local/validation");
-        File.WriteAllBytes(".local/validation/earth_dynamic_geometry.png", screenshot.EncodeToPNG());
+        string outputDirectory = Path.GetDirectoryName(outputPath);
+        if (!string.IsNullOrEmpty(outputDirectory))
+        {
+            Directory.CreateDirectory(outputDirectory);
+        }
+        File.WriteAllBytes(outputPath, screenshot.EncodeToPNG());
         camera.targetTexture = null;
         RenderTexture.active = null;
         UnityEngine.Object.Destroy(screenshot);
