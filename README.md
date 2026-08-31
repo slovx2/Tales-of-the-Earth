@@ -82,6 +82,9 @@ Assets/StreamingAssets/EarthGeometry/land_frames.json
 ## 文档
 
 - [地球模型、数据管线、渲染技术与数据来源](docs/earth-model-and-data-pipeline.md)
+- [地形与海深渲染设计](docs/terrain-rendering.md)
+- [古地形数据验证与推演可行性](docs/paleotopography-data-research.md)
+- [古地形推演原型与交叉验证](docs/paleotopography-prototype.md)
 
 ## 验收
 
