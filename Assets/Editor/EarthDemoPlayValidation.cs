@@ -101,6 +101,14 @@ public static class EarthDemoPlayValidation
             Require(Mathf.Abs(Mathf.DeltaAngle(verticalAngle, 35f)) < 0.1f, "纵向拖动旋转角度不连续");
             Require(axisAlignment > 0.999f, "横拖后纵向旋转轴未保持在相机屏幕右轴");
 
+            controller.ResetView();
+            Vector3 centerScreen = Camera.main.WorldToScreenPoint(controller.transform.position);
+            Vector3 northScreen = Camera.main.WorldToScreenPoint(
+                controller.transform.position + controller.transform.TransformDirection(Vector3.forward));
+            Vector2 northDelta = new Vector2(northScreen.x - centerScreen.x, northScreen.y - centerScreen.y);
+            Require(northDelta.y > 0f && Mathf.Abs(northDelta.x) < northDelta.y * 0.01f,
+                    "重置视角后北极没有朝向屏幕正上方");
+
             Debug.Log(
                 $"EARTH_DEMO_PLAY_VALIDATION_OK：{land.FrameResolutionMa:0} Ma/帧，" +
                 $"海岸线 {land.CoastlineResolutionKm:0} km，平均切帧 {land.AverageLoadMilliseconds:0.0} ms，" +

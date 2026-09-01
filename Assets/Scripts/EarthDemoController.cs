@@ -18,9 +18,11 @@ public sealed class EarthDemoController : MonoBehaviour
     private GUIStyle titleStyle;
     private GUIStyle detailStyle;
     private GUIStyle tickStyle;
+    private GUIStyle resetButtonStyle;
     private Texture2D panelTexture;
     private Texture2D trackTexture;
     private Texture2D thumbTexture;
+    private Vector3 defaultCameraPosition;
 
     public float CurrentTimeMa => timeMa;
     public float ActiveFrameTimeMa => landRenderer != null ? landRenderer.ActiveFrameTimeMa : -1f;
@@ -40,12 +42,21 @@ public sealed class EarthDemoController : MonoBehaviour
         {
             terrainRenderer = earth.GetComponent<DynamicTerrainRenderer>();
         }
+        if (demoCamera != null)
+        {
+            defaultCameraPosition = demoCamera.transform.position;
+        }
+        ResetView();
         SetTimeMa(0f);
         Application.targetFrameRate = 60;
     }
 
     private void Update()
     {
+        if (Input.GetKeyDown(KeyCode.R))
+        {
+            ResetView();
+        }
         if (Input.GetMouseButtonDown(0) && !IsPointerOverTimeline(Input.mousePosition))
         {
             dragging = true;
@@ -79,6 +90,10 @@ public sealed class EarthDemoController : MonoBehaviour
         EnsureGuiStyles();
         GUI.Label(new Rect(24f, 18f, 520f, 30f), "EARTH EVOLUTION · 动态几何原型", titleStyle);
         GUI.Label(new Rect(24f, 48f, 600f, 24f), "左键拖动旋转 · 滚轮缩放 · 时间轴精度 1 Ma", detailStyle);
+        if (GUI.Button(new Rect(Screen.width - 205f, 18f, 181f, 32f), "重置视角（北极朝上）", resetButtonStyle))
+        {
+            ResetView();
+        }
 
         Rect panel = GetTimelinePanelRect();
         GUI.Box(panel, GUIContent.none, timelinePanelStyle);
@@ -133,6 +148,20 @@ public sealed class EarthDemoController : MonoBehaviour
         earth.rotation = Quaternion.AngleAxis(rotationAngle, rotationAxis.normalized) * earth.rotation;
     }
 
+    /// <summary>将地理北极（数据坐标 +Z）对齐到屏幕上方，并恢复默认缩放。</summary>
+    public void ResetView()
+    {
+        if (earth != null && demoCamera != null)
+        {
+            earth.rotation = Quaternion.LookRotation(demoCamera.transform.up, -demoCamera.transform.forward);
+        }
+        if (demoCamera != null && defaultCameraPosition != Vector3.zero)
+        {
+            demoCamera.transform.position = defaultCameraPosition;
+        }
+        dragging = false;
+    }
+
     private static Rect GetTimelinePanelRect()
     {
         float width = Mathf.Min(Screen.width - 36f, 860f);
@@ -179,6 +208,12 @@ public sealed class EarthDemoController : MonoBehaviour
             normal = { textColor = new Color(0.72f, 0.86f, 1f) },
         };
         tickStyle = new GUIStyle(detailStyle) { alignment = TextAnchor.MiddleCenter, fontSize = 12 };
+        resetButtonStyle = new GUIStyle(GUI.skin.button)
+        {
+            fontSize = 12,
+            fontStyle = FontStyle.Bold,
+            normal = { textColor = Color.white },
+        };
     }
 
     private static Texture2D MakeTexture(Color color)
