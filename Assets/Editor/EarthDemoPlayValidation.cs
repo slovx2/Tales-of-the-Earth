@@ -54,6 +54,12 @@ public static class EarthDemoPlayValidation
             Require(land != null, "Play Mode 中找不到 DynamicLandRenderer");
             Require(land.FrameResolutionMa > 0f, "几何帧时间分辨率无效");
             Require(land.CoastlineResolutionKm > 0f, "海岸线空间精度无效");
+            Material landMaterial = land.GetComponent<Renderer>().sharedMaterial;
+            Require(landMaterial != null && landMaterial.HasProperty("_BiomeScale"),
+                    "Play Mode 未加载卫星风格陆地材质");
+            Require(landMaterial.GetFloat("_BiomeScale") > 0f &&
+                    landMaterial.GetFloat("_DetailStrength") > 0f,
+                    "卫星风格陆地材质参数无效");
 
             controller.SetTimeMa(7.4f);
             Require(Mathf.Approximately(controller.CurrentTimeMa, 7f), "时间轴没有保持 1 Ma 精度");

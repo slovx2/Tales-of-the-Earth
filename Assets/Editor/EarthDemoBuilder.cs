@@ -34,7 +34,7 @@ public static class EarthDemoBuilder
         light.type = LightType.Directional;
         light.intensity = 1.2f;
         light.color = new Color(1f, 0.95f, 0.84f);
-        light.transform.rotation = Quaternion.Euler(25f, -35f, 0f);
+        light.transform.rotation = Quaternion.Euler(30f, -55f, 0f);
 
         GameObject earth = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         earth.name = "Earth";
@@ -49,7 +49,7 @@ public static class EarthDemoBuilder
         Material oceanMaterial = new Material(oceanShader) { name = "Dynamic Earth Ocean" };
         oceanMaterial.SetColor("_DeepColor", new Color(0.01f, 0.08f, 0.24f, 1f));
         oceanMaterial.SetColor("_ShallowColor", new Color(0.025f, 0.28f, 0.62f, 1f));
-        oceanMaterial.SetFloat("_Smoothness", 0.84f);
+        oceanMaterial.SetFloat("_Smoothness", 0.48f);
         earth.GetComponent<Renderer>().sharedMaterial = oceanMaterial;
 
         GameObject land = new GameObject("Dynamic Land");
@@ -64,8 +64,15 @@ public static class EarthDemoBuilder
             throw new FileNotFoundException("找不到 Earth/DynamicLand Shader");
         }
         Material landMaterial = new Material(landShader) { name = "Dynamic Earth Land" };
-        landMaterial.SetColor("_LowlandColor", new Color(0.18f, 0.46f, 0.14f, 1f));
-        landMaterial.SetColor("_DrylandColor", new Color(0.58f, 0.54f, 0.20f, 1f));
+        landMaterial.SetColor("_ForestColor", new Color(0.055f, 0.19f, 0.07f, 1f));
+        landMaterial.SetColor("_GrassColor", new Color(0.20f, 0.32f, 0.11f, 1f));
+        landMaterial.SetColor("_DryGrassColor", new Color(0.43f, 0.36f, 0.16f, 1f));
+        landMaterial.SetColor("_DesertColor", new Color(0.62f, 0.50f, 0.29f, 1f));
+        landMaterial.SetColor("_RockColor", new Color(0.34f, 0.30f, 0.24f, 1f));
+        landMaterial.SetColor("_SnowColor", new Color(0.86f, 0.90f, 0.89f, 1f));
+        landMaterial.SetFloat("_BiomeScale", 3.8f);
+        landMaterial.SetFloat("_DetailScale", 26f);
+        landMaterial.SetFloat("_DetailStrength", 0.09f);
         landMeshRenderer.sharedMaterial = landMaterial;
         DynamicLandRenderer dynamicLand = land.AddComponent<DynamicLandRenderer>();
 

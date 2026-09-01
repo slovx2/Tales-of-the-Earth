@@ -179,8 +179,8 @@ Assets/StreamingAssets/EarthGeometry/land_frames.json
 
 海洋使用 Unity 球体和 `Earth/DynamicOcean` Surface Shader：
 
-- 深海与浅海颜色根据球面方向渐变。
-- 使用 Standard 光照模型和较高 Smoothness。
+- 当前深浅蓝根据球面方向做基础视觉渐变，尚不代表真实海深。
+- 使用 Standard 光照模型和弱镜面反射，避免高光遮挡大陆。
 - 通过少量环境发光保留暗部海洋颜色。
 
 ### 6.2 陆地层
@@ -190,7 +190,9 @@ Assets/StreamingAssets/EarthGeometry/land_frames.json
 - 顶点阶段再次归一化单位球位置。
 - `_SurfaceOffset = 1.003`，让陆地略高于海洋表面。
 - 使用归一化球面方向作为平滑法线。
-- 根据局部球面位置生成低地、干燥地和极区颜色变化。
+- 以绝对古纬度和球面连续三维 FBM 生成森林、草地、旱地、沙漠、岩石和冰雪自然色。
+- 程序纹理没有经纬度接缝，并随大陆所在古纬度改变外观。
+- 当前生物群落与高地纹理只用于视觉，不代表真实古气候或古地形数据。
 - 渲染队列位于海洋之后，并使用深度 Offset 减少表面闪烁。
 
 大陆内部 `250 km` 球面细分保证三角形内部不会因跨度过大而落到海洋球之后。
