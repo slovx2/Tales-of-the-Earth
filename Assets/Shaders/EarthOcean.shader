@@ -35,7 +35,8 @@ Shader "Earth/DynamicOcean"
         void surf(Input IN, inout SurfaceOutputStandard o)
         {
             float3 sphere = normalize(mul(unity_WorldToObject, float4(IN.worldPos, 1.0)).xyz);
-            float longitude = atan2(sphere.y, sphere.x);
+            // 与 DynamicLand 相同：显示坐标的 Y 轴相对数据坐标反射。
+            float longitude = atan2(-sphere.y, sphere.x);
             float2 terrainUv = float2(longitude / 6.2831853 + 0.5,
                                        0.5 - asin(sphere.z) / 3.14159265);
             float depth = max(0.0, -tex2D(_TerrainTex, terrainUv).r);

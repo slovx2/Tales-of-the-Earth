@@ -80,10 +80,20 @@ public sealed class EarthGeometryDataset : IDisposable
         for (int index = 0; index < frame.VertexCount; index++)
         {
             int component = index * 3;
+            // 数据采用数学经度坐标（+Y=东经）；Unity 从相机前方观察球面时，
+            // 该约定会让地理东向落到屏幕左侧。运行时转换到显示坐标，
+            // 只反射 Y 轴，保持北极 (+Z) 和所有经纬度数据不变。
             vertices[index] = new Vector3(
                 vertexComponents[component],
-                vertexComponents[component + 1],
+                -vertexComponents[component + 1],
                 vertexComponents[component + 2]);
+        }
+        // Y 轴反射会反转三角形绕序；交换每个三角形的后两个顶点以保持正面朝外。
+        for (int index = 0; index < frame.IndexCount; index += 3)
+        {
+            int second = indices[index + 1];
+            indices[index + 1] = indices[index + 2];
+            indices[index + 2] = second;
         }
         return new LoadedFrame(frameIndex, frame.TimeMa, frame.VertexCount, frame.IndexCount, vertices, indices);
     }
