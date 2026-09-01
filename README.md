@@ -85,6 +85,7 @@ Assets/StreamingAssets/EarthGeometry/land_frames.json
 - [地形与海深渲染设计](docs/terrain-rendering.md)
 - [古地形数据验证与推演可行性](docs/paleotopography-data-research.md)
 - [古地形推演原型与交叉验证](docs/paleotopography-prototype.md)
+- [古海深推演原型与数据口径](docs/paleobathymetry-prototype.md)
 
 ## 验收
 
