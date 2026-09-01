@@ -55,6 +55,8 @@ __pycache__/
 # 离线管线可重建 Unity 资产
 /Assets/StreamingAssets/EarthGeometry/
 /Assets/StreamingAssets/EarthGeometry.meta
+/Assets/StreamingAssets/EarthTerrain/
+/Assets/StreamingAssets/EarthTerrain.meta
 /Assets/Textures/earth_modern*
 /Assets/Textures/paleo*/
 /Assets/Textures/paleo*.meta

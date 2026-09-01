@@ -4,6 +4,7 @@ public sealed class EarthDemoController : MonoBehaviour
 {
     [SerializeField] private Transform earth;
     [SerializeField] private DynamicLandRenderer landRenderer;
+    [SerializeField] private DynamicTerrainRenderer terrainRenderer;
     [SerializeField] private float dragSensitivity = 0.35f;
     [SerializeField] private float zoomSensitivity = 1.2f;
 
@@ -34,6 +35,10 @@ public sealed class EarthDemoController : MonoBehaviour
         if (landRenderer == null)
         {
             landRenderer = earth.GetComponentInChildren<DynamicLandRenderer>();
+        }
+        if (terrainRenderer == null)
+        {
+            terrainRenderer = earth.GetComponent<DynamicTerrainRenderer>();
         }
         SetTimeMa(0f);
         Application.targetFrameRate = 60;
@@ -85,6 +90,10 @@ public sealed class EarthDemoController : MonoBehaviour
         GUI.Label(new Rect(panel.x + 180f, panel.y + 14f, panel.width - 200f, 22f), statistics, detailStyle);
 
         float maxTimeMa = landRenderer != null && landRenderer.MaxTimeMa > 0f ? landRenderer.MaxTimeMa : 1000f;
+        if (terrainRenderer != null && terrainRenderer.MaxTimeMa > 0f)
+        {
+            maxTimeMa = Mathf.Min(maxTimeMa, terrainRenderer.MaxTimeMa);
+        }
         Rect sliderRect = new Rect(panel.x + 22f, panel.y + 43f, panel.width - 44f, 22f);
         float timelinePosition = maxTimeMa - timeMa;
         float nextPosition = GUI.HorizontalSlider(
@@ -104,8 +113,13 @@ public sealed class EarthDemoController : MonoBehaviour
     public void SetTimeMa(float value)
     {
         float maximum = landRenderer != null && landRenderer.MaxTimeMa > 0f ? landRenderer.MaxTimeMa : 1000f;
+        if (terrainRenderer != null && terrainRenderer.MaxTimeMa > 0f)
+        {
+            maximum = Mathf.Min(maximum, terrainRenderer.MaxTimeMa);
+        }
         timeMa = Mathf.Round(Mathf.Clamp(value, 0f, maximum));
         landRenderer?.SetTimeMa(timeMa);
+        terrainRenderer?.SetTimeMa(timeMa);
     }
 
     public void RotateByScreenDelta(Vector2 delta)

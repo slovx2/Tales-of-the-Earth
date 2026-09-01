@@ -76,6 +76,12 @@ public static class EarthDemoBuilder
         landMeshRenderer.sharedMaterial = landMaterial;
         DynamicLandRenderer dynamicLand = land.AddComponent<DynamicLandRenderer>();
 
+        DynamicTerrainRenderer dynamicTerrain = earth.AddComponent<DynamicTerrainRenderer>();
+        SerializedObject serializedTerrain = new SerializedObject(dynamicTerrain);
+        serializedTerrain.FindProperty("landRenderer").objectReferenceValue = landMeshRenderer;
+        serializedTerrain.FindProperty("oceanRenderer").objectReferenceValue = earth.GetComponent<Renderer>();
+        serializedTerrain.ApplyModifiedPropertiesWithoutUndo();
+
         GameObject atmosphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         atmosphere.name = "Atmosphere Glow";
         atmosphere.transform.SetParent(earth.transform, false);
@@ -95,6 +101,7 @@ public static class EarthDemoBuilder
         SerializedObject serializedController = new SerializedObject(controller);
         serializedController.FindProperty("earth").objectReferenceValue = earth.transform;
         serializedController.FindProperty("landRenderer").objectReferenceValue = dynamicLand;
+        serializedController.FindProperty("terrainRenderer").objectReferenceValue = dynamicTerrain;
         serializedController.ApplyModifiedPropertiesWithoutUndo();
 
         RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;

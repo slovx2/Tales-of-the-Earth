@@ -4,7 +4,7 @@
 
 `Tools/prototype_paleobathymetry.py` 在 MULLER2022 v1.2.4 上从 `970 Ma` 逐 `1 Ma` 推演合成洋壳年龄，并按 GDH1 年龄—水深关系生成大尺度古海深。它读取已有大陆高程原型，将两者合并为统一的有符号高度场。
 
-当前产物用于离线算法和视觉验证，写入 `.local/research/paleobathymetry-prototype`，尚未接入 Unity 运行时。
+当前原始产物用于离线算法和视觉验证，写入 `.local/research/paleobathymetry-prototype`；完整帧经 `Tools/build_runtime_terrain.py` 编译后接入 Unity 运行时。
 
 ## 2. 数据口径
 

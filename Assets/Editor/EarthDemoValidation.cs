@@ -13,6 +13,7 @@ public static class EarthDemoValidation
         Camera camera = Camera.main;
         EarthDemoController controller = earth != null ? earth.GetComponent<EarthDemoController>() : null;
         DynamicLandRenderer dynamicLand = land != null ? land.GetComponent<DynamicLandRenderer>() : null;
+        DynamicTerrainRenderer dynamicTerrain = earth != null ? earth.GetComponent<DynamicTerrainRenderer>() : null;
         Renderer oceanRenderer = earth != null ? earth.GetComponent<Renderer>() : null;
         Renderer landRenderer = land != null ? land.GetComponent<Renderer>() : null;
 
@@ -20,6 +21,7 @@ public static class EarthDemoValidation
         Require(camera != null, "场景缺少 Main Camera");
         Require(controller != null, "Earth 缺少 EarthDemoController");
         Require(dynamicLand != null, "场景缺少 DynamicLandRenderer");
+        Require(dynamicTerrain != null, "场景缺少 DynamicTerrainRenderer");
         Require(oceanRenderer != null && oceanRenderer.sharedMaterial != null, "Earth 缺少海洋材质");
         Require(oceanRenderer.sharedMaterial.shader.name == "Earth/DynamicOcean", "Earth 未使用动态海洋 Shader");
         Require(landRenderer != null && landRenderer.sharedMaterial != null, "动态陆地缺少材质");
@@ -28,9 +30,14 @@ public static class EarthDemoValidation
         Require(landRenderer.sharedMaterial.HasProperty("_BiomeScale"), "陆地材质缺少球面生物群落参数");
         Require(landRenderer.sharedMaterial.GetFloat("_DetailStrength") > 0f,
                 "陆地卫星风格细节未启用");
+        Require(landRenderer.sharedMaterial.HasProperty("_TerrainTex") &&
+                oceanRenderer.sharedMaterial.HasProperty("_TerrainTex"),
+                "海陆材质缺少动态高度场接口");
         Require(GameObject.Find("Atmosphere Glow") != null, "场景缺少大气层");
         Require(File.Exists(Path.Combine(Application.streamingAssetsPath, "EarthGeometry/land_frames.bin")),
                 "缺少运行时几何数据集");
+        Require(File.Exists(Path.Combine(Application.streamingAssetsPath, "EarthTerrain/terrain_frames.bin")),
+                "缺少运行时地形/海深数据集");
 
         Debug.Log("EARTH_DEMO_VALIDATION_OK：动态几何场景、海洋/陆地 Shader 和数据集均通过。");
     }

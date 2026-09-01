@@ -6,6 +6,8 @@ Shader "Earth/DynamicOcean"
         _ShallowColor ("浅海", Color) = (0.035, 0.30, 0.62, 1)
         _Smoothness ("光滑度", Range(0, 1)) = 0.82
         _Emission ("环境光", Range(0, 1)) = 0.07
+        _TerrainTex ("古地形海深场", 2D) = "black" {}
+        _TerrainGrid ("高度场网格", Vector) = (360, 180, 0.00278, 0.00556)
     }
 
     SubShader
@@ -21,16 +23,24 @@ Shader "Earth/DynamicOcean"
         fixed4 _ShallowColor;
         half _Smoothness;
         half _Emission;
+        sampler2D _TerrainTex;
+        float4 _TerrainGrid;
 
         struct Input
         {
             float3 worldNormal;
+            float3 worldPos;
         };
 
         void surf(Input IN, inout SurfaceOutputStandard o)
         {
-            half latitude = abs(normalize(IN.worldNormal).y);
-            fixed3 color = lerp(_ShallowColor.rgb, _DeepColor.rgb, latitude * 0.42);
+            float3 sphere = normalize(mul(unity_WorldToObject, float4(IN.worldPos, 1.0)).xyz);
+            float longitude = atan2(sphere.y, sphere.x);
+            float2 terrainUv = float2(longitude / 6.2831853 + 0.5,
+                                       0.5 - asin(sphere.z) / 3.14159265);
+            float depth = max(0.0, -tex2D(_TerrainTex, terrainUv).r);
+            half depthFactor = smoothstep(120.0, 5200.0, depth);
+            fixed3 color = lerp(_ShallowColor.rgb, _DeepColor.rgb, depthFactor);
             o.Albedo = color;
             o.Metallic = 0.0;
             o.Smoothness = _Smoothness;

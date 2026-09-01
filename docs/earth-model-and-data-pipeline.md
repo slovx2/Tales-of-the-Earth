@@ -102,6 +102,8 @@ Assets/StreamingAssets/EarthGeometry/land_frames.json
 
 二进制文件供 Unity 随机读取；JSON 文件保存来源哈希、生成参数、文件哈希和每帧统计信息。
 
+`Assets/StreamingAssets/EarthTerrain/terrain_frames.bin` 是按 `1 Ma` 编译的 `360×180` 半精度有符号高度场。它由 `Tools/build_runtime_terrain.py` 从古地形/古海深合并 NPZ 生成，属于可重建运行时产物，不进入 Git。`DynamicTerrainRenderer` 按时间轴读取单帧并上传复用的 `RHalf Texture2D`，海洋和陆地材质共享该纹理。
+
 ## 4. 运行时二进制格式
 
 格式名为 `Tales Earth Geometry`，当前 Magic 为 `TEG1`、版本为 `1`，所有字段使用小端序。

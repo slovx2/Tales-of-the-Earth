@@ -11,6 +11,8 @@ Shader "Earth/DynamicLand"
         _BiomeScale ("生物群落尺度", Range(1, 10)) = 3.8
         _DetailScale ("地表细节尺度", Range(8, 64)) = 26
         _DetailStrength ("地表细节强度", Range(0, 0.3)) = 0.09
+        _TerrainTex ("古地形高度场", 2D) = "black" {}
+        _TerrainGrid ("高度场网格", Vector) = (360, 180, 0.00278, 0.00556)
         _Emission ("环境光", Range(0, 1)) = 0.035
         _SurfaceOffset ("球面偏移", Range(1.0, 1.02)) = 1.003
     }
@@ -42,6 +44,8 @@ Shader "Earth/DynamicLand"
             half _BiomeScale;
             half _DetailScale;
             half _DetailStrength;
+            sampler2D _TerrainTex;
+            float4 _TerrainGrid;
             half _Emission;
             half _SurfaceOffset;
 
@@ -106,7 +110,12 @@ Shader "Earth/DynamicLand"
             fixed4 frag(v2f input) : SV_Target
             {
                 float3 sphere = normalize(input.spherePosition);
-                float latitude = abs(sphere.y);
+                float latitude = abs(sphere.z);
+                float longitude = atan2(sphere.y, sphere.x);
+                float2 terrainUv = float2(longitude / 6.2831853 + 0.5,
+                                           0.5 - asin(sphere.z) / 3.14159265);
+                float elevation = tex2D(_TerrainTex, terrainUv).r;
+                float elevationFactor = saturate((elevation - 150.0) / 2800.0);
                 float macro = fbm(sphere * _BiomeScale + float3(7.1, 19.3, 31.7));
                 float moistureNoise = fbm(sphere * (_BiomeScale * 1.37) + float3(41.2, 3.7, 17.9));
                 float detail = fbm(sphere * _DetailScale + float3(13.4, 53.1, 5.8));
@@ -134,14 +143,14 @@ Shader "Earth/DynamicLand"
                 land = lerp(land, _ForestColor.rgb, forest * 0.88);
 
                 // 高地场仅用于打破纯色，真实山脉位置由后续古高程场负责。
-                float highland = smoothstep(0.72, 0.91, ridges + (macro - 0.5) * 0.22);
+                float highland = max(smoothstep(0.72, 0.91, ridges + (macro - 0.5) * 0.22),
+                                     smoothstep(0.42, 0.82, elevationFactor));
                 highland *= 1.0 - forest * 0.55;
-                land = lerp(land, _RockColor.rgb, highland * 0.32);
+                land = lerp(land, _RockColor.rgb, highland * 0.38);
 
                 float polarClimate = smoothstep(
                     0.84, 0.97, climateLatitude + (detail - 0.5) * 0.04);
-                float mountainSnow = highland *
-                                     smoothstep(0.70, 0.91, climateLatitude + highland * 0.12);
+                float mountainSnow = highland * smoothstep(0.68, 0.90, elevationFactor) * 0.8;
                 float snow = saturate(max(polarClimate, mountainSnow));
                 land = lerp(land, _SnowColor.rgb, snow);
 

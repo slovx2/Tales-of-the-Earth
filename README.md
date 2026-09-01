@@ -79,6 +79,18 @@ Assets/StreamingAssets/EarthGeometry/land_frames.json
 
 这些文件以及 `Data/processed` 都是可重建产物，不进入 Git。Unity 运行前必须存在 `land_frames.bin`。
 
+地形与海深运行时数据由原型结果编译：
+
+```bash
+uv run python Tools/build_runtime_terrain.py \
+  --source-dir .local/research/paleobathymetry-runtime \
+  --out Assets/StreamingAssets/EarthTerrain/terrain_frames.bin
+```
+
+`terrain_frames.bin` 同样是可重建产物并被 Git 忽略；Unity 运行前必须存在它。
+
+首次重建需要先生成 `0–970 Ma` 的逐 `1 Ma` 古高程和古海深 NPZ（命令参数见对应原型文档），再执行上述编译命令。运行时地形数据共 `971` 帧、`360×180` 网格，Unity 只加载当前帧。
+
 ## 文档
 
 - [地球模型、数据管线、渲染技术与数据来源](docs/earth-model-and-data-pipeline.md)
