@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import json
 import struct
 import sys
 import tempfile
@@ -71,6 +72,27 @@ class RegionDatasetTests(unittest.TestCase):
         self.assertTrue(all(region.area_km2 >= 250_000.0 for region in regions))
         self.assertAlmostEqual(float(statistics["retained_land_fraction"]), 0.756, delta=0.002)
         self.assertGreater(int(statistics["vertex_count"]), 80_000)
+
+    def test_chinese_catalog_covers_all_source_names(self) -> None:
+        regions, _ = build_frame(
+            self.features, self.rotations, 0.0, self.name_ids, 25.0, 250_000.0)
+        catalog_path = ROOT_DIR / "Assets/Resources/EarthRegionNamesZhCn.json"
+        document = json.loads(catalog_path.read_text(encoding="utf-8"))
+        self.assertEqual(document["languageCode"], "zh-CN")
+        entries = document["regions"]
+        sources = [entry["source"] for entry in entries]
+        displays = [entry["display"] for entry in entries]
+        allowed_bases = {"惯用译名", "组合翻译", "审慎音译", "原始名称疑误"}
+        self.assertEqual(sources, sorted(sources))
+        self.assertEqual(len(sources), len(set(sources)))
+        self.assertEqual(len(sources), 642)
+        self.assertEqual(set(sources), set(self.names))
+        self.assertTrue({region.name for region in regions}.issubset(set(sources)))
+        self.assertTrue(all(display.strip() for display in displays))
+        self.assertTrue(all(any("\u4e00" <= character <= "\u9fff" for character in display)
+                            for display in displays))
+        self.assertTrue(all(entry["basis"] in allowed_bases for entry in entries))
+        self.assertTrue(all(entry["reference"].strip() for entry in entries))
 
     def test_binary_contains_one_ma_random_access_table_and_is_deterministic(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

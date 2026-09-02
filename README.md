@@ -32,7 +32,7 @@ uv run python Tools/build_runtime_regions.py
 
 - 左键拖动：旋转地球
 - 左键点击陆地区域：选择并常亮区域边界；点击海洋或空白取消选择
-- 鼠标悬停陆地区域：临时显示区域边界和名称
+- 鼠标悬停陆地区域：临时显示区域边界和中文名称
 - 滚轮：缩放
 - 右上角“重置视角（北极朝上）”或按 `R`：恢复默认缩放，并将北极对齐到屏幕正上方
 - 底部时间轴：切换地质年代
@@ -96,6 +96,8 @@ uv run python Tools/build_runtime_regions.py \
 ```
 
 输出为 `Assets/StreamingAssets/EarthRegions/region_frames.bin` 和同名 JSON 元数据。
+英文原名仍作为稳定区域 ID 和跨年代选择依据，中英双名同时保留；UI 默认使用
+`Assets/Resources/EarthRegionNamesZhCn.json` 中的中文显示名，之后可直接增加语言切换。
 
 地形与海深运行时数据由原型结果编译：
 

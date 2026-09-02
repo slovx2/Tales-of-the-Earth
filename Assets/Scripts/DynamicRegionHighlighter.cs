@@ -17,6 +17,7 @@ public sealed class DynamicRegionHighlighter : MonoBehaviour
     private readonly List<LineRenderer> hoverLines = new List<LineRenderer>();
     private readonly List<LineRenderer> selectedLines = new List<LineRenderer>();
     private EarthRegionDataset dataset;
+    private EarthRegionNameCatalog nameCatalog;
     private EarthRegionDataset.LoadedFrame activeFrame;
     private Camera activeCamera;
     private int activeFrameIndex = -1;
@@ -29,8 +30,11 @@ public sealed class DynamicRegionHighlighter : MonoBehaviour
     public float MinimumAreaKm2 => dataset != null ? dataset.MinimumAreaKm2 : 0f;
     public float ActiveFrameTimeMa => activeFrame != null ? activeFrame.TimeMa : -1f;
     public int ActiveRegionCount => activeFrame != null ? activeFrame.Regions.Length : 0;
-    public string HoveredRegionName => GetRegionName(hoveredRegionId);
-    public string SelectedRegionName => GetRegionName(selectedRegionId);
+    public int LocalizedRegionCount => nameCatalog != null ? nameCatalog.Count : 0;
+    public string HoveredRegionName => GetRegionDisplayName(hoveredRegionId);
+    public string SelectedRegionName => GetRegionDisplayName(selectedRegionId);
+    public string HoveredRegionOriginalName => GetRegionSourceName(hoveredRegionId);
+    public string SelectedRegionOriginalName => GetRegionSourceName(selectedRegionId);
 
     private void Awake()
     {
@@ -47,6 +51,12 @@ public sealed class DynamicRegionHighlighter : MonoBehaviour
         {
             throw new FileNotFoundException("找不到地球区域帧数据", path);
         }
+        TextAsset nameCatalogAsset = Resources.Load<TextAsset>("EarthRegionNamesZhCn");
+        if (nameCatalogAsset == null)
+        {
+            throw new FileNotFoundException("找不到陆地区域中文名称表");
+        }
+        nameCatalog = new EarthRegionNameCatalog(nameCatalogAsset.text);
         dataset = new EarthRegionDataset(path);
         SetTimeMa(0f);
     }
@@ -76,6 +86,7 @@ public sealed class DynamicRegionHighlighter : MonoBehaviour
         }
 
         activeFrame = dataset.LoadNearestFrame(timeMa);
+        ValidateLocalizedNames(activeFrame);
         activeFrameIndex = activeFrame.FrameIndex;
         hoveredRegionId = -1;
         if (!string.IsNullOrEmpty(selectedRegionName) &&
@@ -122,7 +133,7 @@ public sealed class DynamicRegionHighlighter : MonoBehaviour
     public void SelectHoveredOrClear()
     {
         selectedRegionId = hoveredRegionId;
-        selectedRegionName = GetRegionName(selectedRegionId);
+        selectedRegionName = GetRegionSourceName(selectedRegionId);
         RefreshOutlines();
     }
 
@@ -226,12 +237,26 @@ public sealed class DynamicRegionHighlighter : MonoBehaviour
         RefreshOutlines();
     }
 
-    private string GetRegionName(int regionId)
+    private string GetRegionSourceName(int regionId)
     {
         return activeFrame != null && regionId >= 0 &&
                activeFrame.TryGetRegion(regionId, out EarthRegionDataset.Region region)
             ? region.Name
             : null;
+    }
+
+    private string GetRegionDisplayName(int regionId)
+    {
+        string sourceName = GetRegionSourceName(regionId);
+        return sourceName != null ? nameCatalog.GetDisplayName(sourceName) : null;
+    }
+
+    private void ValidateLocalizedNames(EarthRegionDataset.LoadedFrame frame)
+    {
+        foreach (EarthRegionDataset.Region region in frame.Regions)
+        {
+            nameCatalog.GetDisplayName(region.Name);
+        }
     }
 
     private void RefreshOutlines()

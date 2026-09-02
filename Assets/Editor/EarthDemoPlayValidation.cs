@@ -62,6 +62,7 @@ public static class EarthDemoPlayValidation
             Require(Mathf.Approximately(regions.FrameResolutionMa, 1f), "区域帧没有保持 1 Ma 精度");
             Require(Mathf.Approximately(regions.MinimumAreaKm2, 250000f), "区域面积阈值不是 25 万 km²");
             Require(regions.ActiveRegionCount == 149, "0 Ma 过滤后的区域数量不是 149");
+            Require(regions.LocalizedRegionCount == 642, "中文区域名称没有覆盖全部 642 个原始名称");
             Require(land.CoastlineResolutionKm > 0f, "海岸线空间精度无效");
             Material landMaterial = land.GetComponent<Renderer>().sharedMaterial;
             Require(landMaterial != null && landMaterial.HasProperty("_BiomeScale"),
@@ -86,11 +87,19 @@ public static class EarthDemoPlayValidation
                     "0 Ma 区域缺少代表点");
             Require(regions.UpdateHoverAtLocalDirection(representative), "代表点没有命中区域");
             string hoveredName = regions.HoveredRegionName;
+            string hoveredOriginalName = regions.HoveredRegionOriginalName;
             Require(!string.IsNullOrEmpty(hoveredName), "悬停区域名称为空");
+            Require(ContainsChinese(hoveredName), "悬停区域未默认显示中文名");
+            Require(!string.IsNullOrEmpty(hoveredOriginalName) && hoveredOriginalName != hoveredName,
+                    "悬停区域没有同时保留英文原名和中文显示名");
             regions.SelectHoveredOrClear();
             Require(regions.SelectedRegionName == hoveredName, "点击选择没有保存悬停区域");
+            Require(regions.SelectedRegionOriginalName == hoveredOriginalName,
+                    "点击选择没有保存英文原名");
             controller.SetTimeMa(1f);
             Require(regions.SelectedRegionName == hoveredName, "同名区域没有跨年代延续选择");
+            Require(regions.SelectedRegionOriginalName == hoveredOriginalName,
+                    "英文原名没有跨年代延续选择");
             controller.SetTimeMa(0f);
             Vector3 facingDirection = (Camera.main.transform.position - controller.transform.position).normalized;
             controller.transform.rotation = Quaternion.FromToRotation(
@@ -184,5 +193,17 @@ public static class EarthDemoPlayValidation
         {
             throw new InvalidOperationException(message);
         }
+    }
+
+    private static bool ContainsChinese(string value)
+    {
+        foreach (char character in value)
+        {
+            if (character >= '\u4e00' && character <= '\u9fff')
+            {
+                return true;
+            }
+        }
+        return false;
     }
 }

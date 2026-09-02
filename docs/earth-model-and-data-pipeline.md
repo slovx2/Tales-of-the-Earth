@@ -116,6 +116,9 @@ Assets/StreamingAssets/EarthRegions/region_frames.json
 ```
 
 运行时只加载当前区域帧；小于阈值的陆地仍然渲染，但不参与悬停和选择。
+区域数据内的英文原名保持不变，继续用于稳定 ID 和跨年代选择；
+`Assets/Resources/EarthRegionNamesZhCn.json` 仅在展示层把源数据全部 642 个原始名称映射为简体中文，UI 默认使用该中文名。
+名称表为每项保留 `basis` 和 `reference`：前者区分惯用译名、组合翻译、审慎音译与原始名称疑误，后者记录核验来源或术语依据。
 
 ## 4. 运行时二进制格式
 

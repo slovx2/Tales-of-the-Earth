@@ -42,6 +42,8 @@ public static class EarthDemoValidation
                 "缺少运行时地形/海深数据集");
         Require(File.Exists(Path.Combine(Application.streamingAssetsPath, "EarthRegions/region_frames.bin")),
                 "缺少运行时区域数据集");
+        Require(Resources.Load<TextAsset>("EarthRegionNamesZhCn") != null,
+                "缺少陆地区域中文名称表");
         Require(Shader.Find("Earth/RegionOutline") != null, "缺少区域描边 Shader");
 
         Debug.Log("EARTH_DEMO_VALIDATION_OK：动态几何、地形和陆地区域场景均通过。");
