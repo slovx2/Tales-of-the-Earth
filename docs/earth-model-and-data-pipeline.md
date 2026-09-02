@@ -108,6 +108,15 @@ Assets/StreamingAssets/EarthGeometry/land_frames.json
 
 `Assets/StreamingAssets/EarthTerrain/terrain_frames.bin` 是按 `1 Ma` 编译的 `360×180` 半精度有符号高度场。它由 `Tools/build_runtime_terrain.py` 从古地形/古海深合并 NPZ 生成，属于可重建运行时产物，不进入 Git。`DynamicTerrainRenderer` 按时间轴读取单帧并上传复用的 `RHalf Texture2D`，海洋和陆地材质共享该纹理。
 
+`Tools/build_runtime_regions.py` 从同一套 MULLER2022 海岸线命名多边形独立生成区域数据。它逐 `1 Ma` 重建、按完全相同的原始名称合并，并过滤当帧合计面积小于 `250,000 km²` 的区域。边界以约 `25 km` 分段并量化为 `SNORM int16x3` 球面方向，写入：
+
+```text
+Assets/StreamingAssets/EarthRegions/region_frames.bin
+Assets/StreamingAssets/EarthRegions/region_frames.json
+```
+
+运行时只加载当前区域帧；小于阈值的陆地仍然渲染，但不参与悬停和选择。
+
 ## 4. 运行时二进制格式
 
 格式名为 `Tales Earth Geometry`，当前 Magic 为 `TEG1`、版本为 `1`，所有字段使用小端序。
@@ -179,6 +188,9 @@ Assets/StreamingAssets/EarthGeometry/land_frames.json
 - 处理滚轮缩放。
 - 提供视角重置：将地理北极（数据坐标 `+Z`）对齐到屏幕正上方，并恢复默认相机距离；按钮和 `R` 键使用同一逻辑。
 - 在底部显示年代、实际几何帧、顶点数和切帧耗时。
+- 区分左键点击与超过 6 像素的拖动，并协调区域悬停、单选和清除选择。
+
+`DynamicRegionHighlighter` 使用地球球体碰撞器把鼠标换算为球面方向，通过包围锥和球面多边形包含测试查询区域。悬停与选中边界使用两套池化白色线条；选择按原始名称跨时间延续，新帧没有该名称时自动清除。
 
 ## 6. 渲染技术
 

@@ -5,11 +5,14 @@ public sealed class EarthDemoController : MonoBehaviour
     [SerializeField] private Transform earth;
     [SerializeField] private DynamicLandRenderer landRenderer;
     [SerializeField] private DynamicTerrainRenderer terrainRenderer;
+    [SerializeField] private DynamicRegionHighlighter regionHighlighter;
     [SerializeField] private float dragSensitivity = 0.35f;
     [SerializeField] private float zoomSensitivity = 1.2f;
 
     private bool dragging;
+    private bool pointerTracking;
     private Vector3 lastMouse;
+    private Vector3 pointerDownPosition;
     private Camera demoCamera;
     private float timeMa;
     private GUIStyle timelinePanelStyle;
@@ -19,6 +22,8 @@ public sealed class EarthDemoController : MonoBehaviour
     private GUIStyle detailStyle;
     private GUIStyle tickStyle;
     private GUIStyle resetButtonStyle;
+    private GUIStyle regionPanelStyle;
+    private GUIStyle regionLabelStyle;
     private Texture2D panelTexture;
     private Texture2D trackTexture;
     private Texture2D thumbTexture;
@@ -42,6 +47,10 @@ public sealed class EarthDemoController : MonoBehaviour
         {
             terrainRenderer = earth.GetComponent<DynamicTerrainRenderer>();
         }
+        if (regionHighlighter == null)
+        {
+            regionHighlighter = earth.GetComponent<DynamicRegionHighlighter>();
+        }
         if (demoCamera != null)
         {
             defaultCameraPosition = demoCamera.transform.position;
@@ -57,20 +66,41 @@ public sealed class EarthDemoController : MonoBehaviour
         {
             ResetView();
         }
-        if (Input.GetMouseButtonDown(0) && !IsPointerOverTimeline(Input.mousePosition))
+        bool pointerOverUi = IsPointerOverUi(Input.mousePosition);
+        if (Input.GetMouseButtonDown(0) && !pointerOverUi)
         {
-            dragging = true;
+            pointerTracking = true;
+            dragging = false;
+            pointerDownPosition = Input.mousePosition;
             lastMouse = Input.mousePosition;
         }
-        if (Input.GetMouseButtonUp(0) || !Input.GetMouseButton(0))
+        if (pointerTracking && Input.GetMouseButton(0))
         {
+            if (!dragging && (Input.mousePosition - pointerDownPosition).sqrMagnitude >= 36f)
+            {
+                dragging = true;
+            }
+            if (dragging)
+            {
+                Vector2 delta = Input.mousePosition - lastMouse;
+                RotateByScreenDelta(delta);
+                lastMouse = Input.mousePosition;
+            }
+        }
+        if (Input.GetMouseButtonUp(0))
+        {
+            if (pointerTracking && !dragging && !pointerOverUi)
+            {
+                regionHighlighter?.UpdateHover(demoCamera, Input.mousePosition);
+                regionHighlighter?.SelectHoveredOrClear();
+            }
+            pointerTracking = false;
             dragging = false;
         }
-        if (dragging)
+        else if (!Input.GetMouseButton(0) && pointerTracking)
         {
-            Vector2 delta = Input.mousePosition - lastMouse;
-            RotateByScreenDelta(delta);
-            lastMouse = Input.mousePosition;
+            pointerTracking = false;
+            dragging = false;
         }
 
         if (demoCamera != null)
@@ -83,17 +113,40 @@ public sealed class EarthDemoController : MonoBehaviour
                 demoCamera.transform.position = position;
             }
         }
+
+        if (dragging || pointerOverUi)
+        {
+            regionHighlighter?.ClearHover();
+        }
+        else
+        {
+            regionHighlighter?.UpdateHover(demoCamera, Input.mousePosition);
+        }
     }
 
     private void OnGUI()
     {
         EnsureGuiStyles();
         GUI.Label(new Rect(24f, 18f, 520f, 30f), "EARTH EVOLUTION · 动态几何原型", titleStyle);
-        GUI.Label(new Rect(24f, 48f, 600f, 24f), "左键拖动旋转 · 滚轮缩放 · 时间轴精度 1 Ma", detailStyle);
-        if (GUI.Button(new Rect(Screen.width - 205f, 18f, 181f, 32f), "重置视角（北极朝上）", resetButtonStyle))
+        GUI.Label(new Rect(24f, 48f, 680f, 24f),
+            "左键点击选择 · 左键拖动旋转 · 滚轮缩放 · 时间轴精度 1 Ma", detailStyle);
+        if (GUI.Button(GetResetButtonRect(), "重置视角（北极朝上）", resetButtonStyle))
         {
             ResetView();
         }
+
+        Rect regionPanel = GetRegionPanelRect();
+        GUI.Box(regionPanel, GUIContent.none, regionPanelStyle);
+        string hovered = regionHighlighter != null && !string.IsNullOrEmpty(regionHighlighter.HoveredRegionName)
+            ? regionHighlighter.HoveredRegionName
+            : "—";
+        string selected = regionHighlighter != null && !string.IsNullOrEmpty(regionHighlighter.SelectedRegionName)
+            ? regionHighlighter.SelectedRegionName
+            : "—";
+        GUI.Label(new Rect(regionPanel.x + 12f, regionPanel.y + 8f, regionPanel.width - 24f, 28f),
+            $"悬停：{hovered}", regionLabelStyle);
+        GUI.Label(new Rect(regionPanel.x + 12f, regionPanel.y + 39f, regionPanel.width - 24f, 28f),
+            $"已选择：{selected}", regionLabelStyle);
 
         Rect panel = GetTimelinePanelRect();
         GUI.Box(panel, GUIContent.none, timelinePanelStyle);
@@ -132,9 +185,14 @@ public sealed class EarthDemoController : MonoBehaviour
         {
             maximum = Mathf.Min(maximum, terrainRenderer.MaxTimeMa);
         }
+        if (regionHighlighter != null && regionHighlighter.MaxTimeMa > 0f)
+        {
+            maximum = Mathf.Min(maximum, regionHighlighter.MaxTimeMa);
+        }
         timeMa = Mathf.Round(Mathf.Clamp(value, 0f, maximum));
         landRenderer?.SetTimeMa(timeMa);
         terrainRenderer?.SetTimeMa(timeMa);
+        regionHighlighter?.SetTimeMa(timeMa);
     }
 
     public void RotateByScreenDelta(Vector2 delta)
@@ -160,6 +218,7 @@ public sealed class EarthDemoController : MonoBehaviour
             demoCamera.transform.position = defaultCameraPosition;
         }
         dragging = false;
+        pointerTracking = false;
     }
 
     private static Rect GetTimelinePanelRect()
@@ -168,10 +227,23 @@ public sealed class EarthDemoController : MonoBehaviour
         return new Rect((Screen.width - width) * 0.5f, Screen.height - 108f, width, 92f);
     }
 
-    private static bool IsPointerOverTimeline(Vector3 mousePosition)
+    private static Rect GetResetButtonRect()
+    {
+        return new Rect(Screen.width - 205f, 18f, 181f, 32f);
+    }
+
+    private static Rect GetRegionPanelRect()
+    {
+        float width = Mathf.Min(360f, Mathf.Max(240f, Screen.width * 0.30f));
+        return new Rect(Screen.width - width - 24f, 60f, width, 76f);
+    }
+
+    private static bool IsPointerOverUi(Vector3 mousePosition)
     {
         Vector2 guiPosition = new Vector2(mousePosition.x, Screen.height - mousePosition.y);
-        return GetTimelinePanelRect().Contains(guiPosition);
+        return GetTimelinePanelRect().Contains(guiPosition) ||
+               GetResetButtonRect().Contains(guiPosition) ||
+               GetRegionPanelRect().Contains(guiPosition);
     }
 
     private void EnsureGuiStyles()
@@ -212,6 +284,14 @@ public sealed class EarthDemoController : MonoBehaviour
         {
             fontSize = 12,
             fontStyle = FontStyle.Bold,
+            normal = { textColor = Color.white },
+        };
+        regionPanelStyle = new GUIStyle(GUI.skin.box) { normal = { background = panelTexture } };
+        regionLabelStyle = new GUIStyle(GUI.skin.label)
+        {
+            fontSize = 13,
+            alignment = TextAnchor.MiddleLeft,
+            clipping = TextClipping.Clip,
             normal = { textColor = Color.white },
         };
     }

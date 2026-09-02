@@ -14,6 +14,7 @@ public static class EarthDemoValidation
         EarthDemoController controller = earth != null ? earth.GetComponent<EarthDemoController>() : null;
         DynamicLandRenderer dynamicLand = land != null ? land.GetComponent<DynamicLandRenderer>() : null;
         DynamicTerrainRenderer dynamicTerrain = earth != null ? earth.GetComponent<DynamicTerrainRenderer>() : null;
+        DynamicRegionHighlighter regionHighlighter = earth != null ? earth.GetComponent<DynamicRegionHighlighter>() : null;
         Renderer oceanRenderer = earth != null ? earth.GetComponent<Renderer>() : null;
         Renderer landRenderer = land != null ? land.GetComponent<Renderer>() : null;
 
@@ -22,6 +23,7 @@ public static class EarthDemoValidation
         Require(controller != null, "Earth 缺少 EarthDemoController");
         Require(dynamicLand != null, "场景缺少 DynamicLandRenderer");
         Require(dynamicTerrain != null, "场景缺少 DynamicTerrainRenderer");
+        Require(regionHighlighter != null, "场景缺少 DynamicRegionHighlighter");
         Require(oceanRenderer != null && oceanRenderer.sharedMaterial != null, "Earth 缺少海洋材质");
         Require(oceanRenderer.sharedMaterial.shader.name == "Earth/DynamicOcean", "Earth 未使用动态海洋 Shader");
         Require(landRenderer != null && landRenderer.sharedMaterial != null, "动态陆地缺少材质");
@@ -38,8 +40,11 @@ public static class EarthDemoValidation
                 "缺少运行时几何数据集");
         Require(File.Exists(Path.Combine(Application.streamingAssetsPath, "EarthTerrain/terrain_frames.bin")),
                 "缺少运行时地形/海深数据集");
+        Require(File.Exists(Path.Combine(Application.streamingAssetsPath, "EarthRegions/region_frames.bin")),
+                "缺少运行时区域数据集");
+        Require(Shader.Find("Earth/RegionOutline") != null, "缺少区域描边 Shader");
 
-        Debug.Log("EARTH_DEMO_VALIDATION_OK：动态几何场景、海洋/陆地 Shader 和数据集均通过。");
+        Debug.Log("EARTH_DEMO_VALIDATION_OK：动态几何、地形和陆地区域场景均通过。");
     }
 
     private static void Require(bool condition, string message)

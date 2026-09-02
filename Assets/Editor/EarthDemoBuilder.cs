@@ -10,11 +10,18 @@ public static class EarthDemoBuilder
     public static void Build()
     {
         const string datasetPath = "Assets/StreamingAssets/EarthGeometry/land_frames.bin";
+        const string regionDatasetPath = "Assets/StreamingAssets/EarthRegions/region_frames.bin";
         if (!File.Exists(datasetPath))
         {
             throw new FileNotFoundException(
                 "缺少动态几何数据，请先运行 uv run python Tools/build_runtime_geometry.py",
                 datasetPath);
+        }
+        if (!File.Exists(regionDatasetPath))
+        {
+            throw new FileNotFoundException(
+                "缺少区域数据，请先运行 uv run python Tools/build_runtime_regions.py",
+                regionDatasetPath);
         }
 
         Directory.CreateDirectory("Assets/Scenes");
@@ -82,6 +89,19 @@ public static class EarthDemoBuilder
         serializedTerrain.FindProperty("oceanRenderer").objectReferenceValue = earth.GetComponent<Renderer>();
         serializedTerrain.ApplyModifiedPropertiesWithoutUndo();
 
+        Shader regionShader = Shader.Find("Earth/RegionOutline");
+        if (regionShader == null)
+        {
+            throw new FileNotFoundException("找不到 Earth/RegionOutline Shader");
+        }
+        Material regionMaterial = new Material(regionShader) { name = "Earth Region Outline" };
+        regionMaterial.SetColor("_Color", Color.white);
+        DynamicRegionHighlighter regionHighlighter = earth.AddComponent<DynamicRegionHighlighter>();
+        SerializedObject serializedRegions = new SerializedObject(regionHighlighter);
+        serializedRegions.FindProperty("earthCollider").objectReferenceValue = earth.GetComponent<SphereCollider>();
+        serializedRegions.FindProperty("outlineMaterial").objectReferenceValue = regionMaterial;
+        serializedRegions.ApplyModifiedPropertiesWithoutUndo();
+
         GameObject atmosphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         atmosphere.name = "Atmosphere Glow";
         atmosphere.transform.SetParent(earth.transform, false);
@@ -102,6 +122,7 @@ public static class EarthDemoBuilder
         serializedController.FindProperty("earth").objectReferenceValue = earth.transform;
         serializedController.FindProperty("landRenderer").objectReferenceValue = dynamicLand;
         serializedController.FindProperty("terrainRenderer").objectReferenceValue = dynamicTerrain;
+        serializedController.FindProperty("regionHighlighter").objectReferenceValue = regionHighlighter;
         serializedController.ApplyModifiedPropertiesWithoutUndo();
 
         RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
@@ -115,6 +136,6 @@ public static class EarthDemoBuilder
             new EditorBuildSettingsScene("Assets/Scenes/EarthDemo.unity", true),
         };
         AssetDatabase.SaveAssets();
-        Debug.Log("Earth demo scene created with runtime geometry dataset.");
+        Debug.Log("Earth demo scene created with runtime geometry, terrain and region datasets.");
     }
 }

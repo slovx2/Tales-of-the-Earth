@@ -23,6 +23,7 @@
 ```bash
 uv sync --python 3.9.20
 uv run python Tools/build_runtime_geometry.py
+uv run python Tools/build_runtime_regions.py
 ```
 
 然后使用 Unity 打开项目，进入 `Assets/Scenes/EarthDemo.unity` 并点击 Play。
@@ -30,6 +31,8 @@ uv run python Tools/build_runtime_geometry.py
 操作方式：
 
 - 左键拖动：旋转地球
+- 左键点击陆地区域：选择并常亮区域边界；点击海洋或空白取消选择
+- 鼠标悬停陆地区域：临时显示区域边界和名称
 - 滚轮：缩放
 - 右上角“重置视角（北极朝上）”或按 `R`：恢复默认缩放，并将北极对齐到屏幕正上方
 - 底部时间轴：切换地质年代
@@ -46,6 +49,7 @@ uv run python Tools/build_runtime_geometry.py
 | `Data/raw` | 纳入版本管理的原始数据压缩包 |
 | `Data/DATA_SOURCES.json` | 数据来源、版本和 SHA-256 |
 | `Assets/StreamingAssets/EarthGeometry` | 可重建的 Unity 运行时几何数据 |
+| `Assets/StreamingAssets/EarthRegions` | 可重建的逐 Ma 命名陆地区域数据 |
 | `docs` | 工程设计与数据文档 |
 | `.local` | 本机日志、截图和临时验收产物，不进入 Git |
 
@@ -80,6 +84,18 @@ Assets/StreamingAssets/EarthGeometry/land_frames.json
 ```
 
 这些文件以及 `Data/processed` 都是可重建产物，不进入 Git。Unity 运行前必须存在 `land_frames.bin`。
+
+命名陆地区域数据单独生成，默认按同名区域逐帧合并并过滤小于 25 万 km² 的区域：
+
+```bash
+uv run python Tools/build_runtime_regions.py \
+  --time-step-ma 1 \
+  --coastline-km 25 \
+  --minimum-area-km2 250000 \
+  --max-time-ma 1000
+```
+
+输出为 `Assets/StreamingAssets/EarthRegions/region_frames.bin` 和同名 JSON 元数据。
 
 地形与海深运行时数据由原型结果编译：
 
