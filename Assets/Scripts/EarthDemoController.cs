@@ -2,12 +2,15 @@ using UnityEngine;
 
 public sealed class EarthDemoController : MonoBehaviour
 {
+    private const float GuiScaleMultiplier = 0.6f;
+
     [SerializeField] private Transform earth;
     [SerializeField] private DynamicLandRenderer landRenderer;
     [SerializeField] private DynamicTerrainRenderer terrainRenderer;
     [SerializeField] private DynamicRegionHighlighter regionHighlighter;
     [SerializeField] private float dragSensitivity = 0.35f;
     [SerializeField] private float zoomSensitivity = 1.2f;
+    [SerializeField] private Vector2 guiReferenceResolution = new Vector2(960f, 540f);
 
     private bool dragging;
     private bool pointerTracking;
@@ -66,7 +69,7 @@ public sealed class EarthDemoController : MonoBehaviour
         {
             ResetView();
         }
-        bool pointerOverUi = IsPointerOverUi(Input.mousePosition);
+        bool pointerOverUi = IsPointerOverUi(Input.mousePosition, GetGuiScale());
         if (Input.GetMouseButtonDown(0) && !pointerOverUi)
         {
             pointerTracking = true;
@@ -127,15 +130,21 @@ public sealed class EarthDemoController : MonoBehaviour
     private void OnGUI()
     {
         EnsureGuiStyles();
+        float guiScale = GetGuiScale();
+        float guiWidth = Screen.width / guiScale;
+        float guiHeight = Screen.height / guiScale;
+        Matrix4x4 previousGuiMatrix = GUI.matrix;
+        GUI.matrix = Matrix4x4.Scale(new Vector3(guiScale, guiScale, 1f));
+
         GUI.Label(new Rect(24f, 18f, 520f, 30f), "EARTH EVOLUTION · 动态几何原型", titleStyle);
         GUI.Label(new Rect(24f, 48f, 680f, 24f),
             "左键点击选择 · 左键拖动旋转 · 滚轮缩放 · 时间轴精度 1 Ma", detailStyle);
-        if (GUI.Button(GetResetButtonRect(), "重置视角（北极朝上）", resetButtonStyle))
+        if (GUI.Button(GetResetButtonRect(guiWidth), "重置视角（北极朝上）", resetButtonStyle))
         {
             ResetView();
         }
 
-        Rect regionPanel = GetRegionPanelRect();
+        Rect regionPanel = GetRegionPanelRect(guiWidth);
         GUI.Box(regionPanel, GUIContent.none, regionPanelStyle);
         string hovered = regionHighlighter != null && !string.IsNullOrEmpty(regionHighlighter.HoveredRegionName)
             ? regionHighlighter.HoveredRegionName
@@ -148,7 +157,7 @@ public sealed class EarthDemoController : MonoBehaviour
         GUI.Label(new Rect(regionPanel.x + 12f, regionPanel.y + 39f, regionPanel.width - 24f, 28f),
             $"已选择：{selected}", regionLabelStyle);
 
-        Rect panel = GetTimelinePanelRect();
+        Rect panel = GetTimelinePanelRect(guiWidth, guiHeight);
         GUI.Box(panel, GUIContent.none, timelinePanelStyle);
         GUI.Label(new Rect(panel.x + 20f, panel.y + 12f, 180f, 24f), "地质时间", titleStyle);
         string statistics = landRenderer == null
@@ -176,6 +185,8 @@ public sealed class EarthDemoController : MonoBehaviour
         GUI.Label(new Rect(panel.x + 18f, tickY, 120f, 20f), $"{maxTimeMa:0} Ma", tickStyle);
         GUI.Label(new Rect(panel.center.x - 55f, tickY, 110f, 20f), $"{maxTimeMa * 0.5f:0} Ma", tickStyle);
         GUI.Label(new Rect(panel.xMax - 138f, tickY, 120f, 20f), "0 Ma · 现在", tickStyle);
+
+        GUI.matrix = previousGuiMatrix;
     }
 
     public void SetTimeMa(float value)
@@ -221,29 +232,39 @@ public sealed class EarthDemoController : MonoBehaviour
         pointerTracking = false;
     }
 
-    private static Rect GetTimelinePanelRect()
+    private static Rect GetTimelinePanelRect(float screenWidth, float screenHeight)
     {
-        float width = Mathf.Min(Screen.width - 36f, 860f);
-        return new Rect((Screen.width - width) * 0.5f, Screen.height - 108f, width, 92f);
+        float width = Mathf.Min(screenWidth - 36f, 860f);
+        return new Rect((screenWidth - width) * 0.5f, screenHeight - 108f, width, 92f);
     }
 
-    private static Rect GetResetButtonRect()
+    private static Rect GetResetButtonRect(float screenWidth)
     {
-        return new Rect(Screen.width - 205f, 18f, 181f, 32f);
+        return new Rect(screenWidth - 205f, 18f, 181f, 32f);
     }
 
-    private static Rect GetRegionPanelRect()
+    private static Rect GetRegionPanelRect(float screenWidth)
     {
-        float width = Mathf.Min(360f, Mathf.Max(240f, Screen.width * 0.30f));
-        return new Rect(Screen.width - width - 24f, 60f, width, 76f);
+        float width = Mathf.Min(360f, Mathf.Max(240f, screenWidth * 0.30f));
+        return new Rect(screenWidth - width - 24f, 60f, width, 76f);
     }
 
-    private static bool IsPointerOverUi(Vector3 mousePosition)
+    private static bool IsPointerOverUi(Vector3 mousePosition, float guiScale)
     {
-        Vector2 guiPosition = new Vector2(mousePosition.x, Screen.height - mousePosition.y);
-        return GetTimelinePanelRect().Contains(guiPosition) ||
-               GetResetButtonRect().Contains(guiPosition) ||
-               GetRegionPanelRect().Contains(guiPosition);
+        float guiWidth = Screen.width / guiScale;
+        float guiHeight = Screen.height / guiScale;
+        Vector2 guiPosition = new Vector2(mousePosition.x / guiScale, guiHeight - mousePosition.y / guiScale);
+        return GetTimelinePanelRect(guiWidth, guiHeight).Contains(guiPosition) ||
+               GetResetButtonRect(guiWidth).Contains(guiPosition) ||
+               GetRegionPanelRect(guiWidth).Contains(guiPosition);
+    }
+
+    private float GetGuiScale()
+    {
+        float referenceWidth = Mathf.Max(1f, guiReferenceResolution.x);
+        float referenceHeight = Mathf.Max(1f, guiReferenceResolution.y);
+        float resolutionScale = Mathf.Min(Screen.width / referenceWidth, Screen.height / referenceHeight);
+        return Mathf.Max(0.5f, Mathf.Max(1f, resolutionScale) * GuiScaleMultiplier);
     }
 
     private void EnsureGuiStyles()

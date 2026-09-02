@@ -205,6 +205,7 @@ MonoBehaviour:
   regionHighlighter: {fileID: 25551157}
   dragSensitivity: 0.35
   zoomSensitivity: 1.2
+  guiReferenceResolution: {x: 960, y: 540}
 --- !u!114 &25551157
 MonoBehaviour:
   m_ObjectHideFlags: 0
