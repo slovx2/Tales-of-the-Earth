@@ -436,7 +436,6 @@ public sealed class EarthDemoController : MonoBehaviour
         timelineDragging = true;
         regionHighlighter?.ClearHover();
         landRenderer?.SetPreviewMode(true);
-        terrainRenderer?.SetPreviewMode(true);
     }
 
     private void EndTimelineDrag()
@@ -444,7 +443,6 @@ public sealed class EarthDemoController : MonoBehaviour
         if (!timelineDragging) return;
         timelineDragging = false;
         landRenderer?.SetPreviewMode(false);
-        terrainRenderer?.SetPreviewMode(false);
     }
 
     private float ClampAndRoundTime(float value)
