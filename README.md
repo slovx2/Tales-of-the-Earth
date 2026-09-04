@@ -31,11 +31,12 @@ uv run python Tools/build_runtime_regions.py
 操作方式：
 
 - 左键拖动：旋转地球
-- 左键点击陆地区域：选择并常亮区域边界；点击海洋或空白取消选择
-- 鼠标悬停陆地区域：临时显示区域边界和中文名称
+- 左键点击陆地区域：选择并常亮当前区域及其祖先边界；点击海洋或空白取消选择
+- 鼠标悬停陆地区域：临时显示分层彩色边界和中文面包屑
 - 滚轮：缩放
 - 右上角“重置视角（北极朝上）”或按 `R`：恢复默认缩放，并将北极对齐到屏幕正上方
-- 底部时间轴：切换地质年代
+- 底部时间轴：按纪切换地质年代；下方短刻度表示世（不显示世名）
+- 时间轴支持“真实比例”和“年代等比例”两种显示模式，切换不会改变当前 Ma
 
 ## 工程索引
 
@@ -85,7 +86,8 @@ Assets/StreamingAssets/EarthGeometry/land_frames.json
 
 这些文件以及 `Data/processed` 都是可重建产物，不进入 Git。Unity 运行前必须存在 `land_frames.bin`。
 
-命名陆地区域数据单独生成，默认按同名区域逐帧合并并过滤小于 25 万 km² 的区域：
+命名陆地区域数据单独生成。每帧解析动态板块拓扑作为一级区域，
+再把 Coastline/Static 陆地构造单元按所属拓扑拆为二级区域：
 
 ```bash
 uv run python Tools/build_runtime_regions.py \
@@ -96,8 +98,10 @@ uv run python Tools/build_runtime_regions.py \
 ```
 
 输出为 `Assets/StreamingAssets/EarthRegions/region_frames.bin` 和同名 JSON 元数据。
-英文原名仍作为稳定区域 ID 和跨年代选择依据，中英双名同时保留；UI 默认使用
-`Assets/Resources/EarthRegionNamesZhCn.json` 中的中文显示名，之后可直接增加语言切换。
+所有区域都会写入；25 万 km² 仅限制二级区域能否被直接拾取，小区域仍参与父级陆地边界。
+英文原名、Feature ID、Plate ID 和父子关系同时保留；UI 默认使用
+`Assets/Resources/EarthRegionNamesZhCn.json` 中的中文显示名和分层面包屑。同一英文源名
+可分别记录陆地单元与拓扑语义，例如 `Eurasia` 显示为“欧亚大陆”或“欧亚板块”。
 
 地形与海深运行时数据由原型结果编译：
 

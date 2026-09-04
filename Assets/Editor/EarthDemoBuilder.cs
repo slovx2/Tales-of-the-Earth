@@ -33,8 +33,9 @@ public static class EarthDemoBuilder
         camera.clearFlags = CameraClearFlags.SolidColor;
         camera.backgroundColor = new Color(0.005f, 0.008f, 0.02f);
         camera.fieldOfView = 42f;
-        camera.transform.position = new Vector3(0f, 0.2f, -6.2f);
-        camera.transform.LookAt(new Vector3(0f, 0.12f, 0f));
+        // 将相机与观察中心整体下移，给底部时间轴让出稳定的画面空间。
+        camera.transform.position = new Vector3(0f, -0.05f, -6.2f);
+        camera.transform.LookAt(new Vector3(0f, -0.13f, 0f));
 
         GameObject lightObject = new GameObject("Sun Light");
         Light light = lightObject.AddComponent<Light>();
@@ -45,6 +46,8 @@ public static class EarthDemoBuilder
 
         GameObject earth = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         earth.name = "Earth";
+        // 为底部时间轴预留完整的可视空间，避免地球下缘落入 UI 面板。
+        earth.transform.localPosition = new Vector3(0f, 0.85f, 0f);
         earth.transform.localScale = Vector3.one * 2.35f;
         earth.transform.rotation = Quaternion.Euler(0f, 25f, -8f);
 

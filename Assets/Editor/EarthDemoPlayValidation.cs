@@ -61,8 +61,9 @@ public static class EarthDemoPlayValidation
             Require(land.FrameResolutionMa > 0f, "几何帧时间分辨率无效");
             Require(Mathf.Approximately(regions.FrameResolutionMa, 1f), "区域帧没有保持 1 Ma 精度");
             Require(Mathf.Approximately(regions.MinimumAreaKm2, 250000f), "区域面积阈值不是 25 万 km²");
-            Require(regions.ActiveRegionCount == 149, "0 Ma 过滤后的区域数量不是 149");
-            Require(regions.LocalizedRegionCount == 642, "中文区域名称没有覆盖全部 642 个原始名称");
+            Require(regions.ActiveRegionCount == 894, "0 Ma 分层区域节点数量不是 894");
+            Require(regions.LocalizedRegionCount == 1323,
+                    "中文区域名称没有覆盖全部陆地和拓扑源名称");
             Require(land.CoastlineResolutionKm > 0f, "海岸线空间精度无效");
             Material landMaterial = land.GetComponent<Renderer>().sharedMaterial;
             Require(landMaterial != null && landMaterial.HasProperty("_BiomeScale"),
@@ -75,6 +76,33 @@ public static class EarthDemoPlayValidation
             Renderer oceanRenderer = GameObject.Find("Earth").GetComponent<Renderer>();
             Require(oceanRenderer.sharedMaterial.GetTexture("_TerrainTex") != null,
                     "Play Mode 中海洋材质未绑定海深场");
+
+            Require(GeologicTimeScale.TryGetCurrent(0f, out GeologicPeriod presentPeriod,
+                        out GeologicEpoch presentEpoch) &&
+                    presentPeriod.DisplayName == "第四纪" && presentEpoch.DisplayName == "全新世",
+                    "0 Ma 地质年代解析错误");
+            Require(GeologicTimeScale.TryGetCurrent(66f, out GeologicPeriod cretaceousPeriod,
+                        out GeologicEpoch cretaceousEpoch) &&
+                    cretaceousPeriod.DisplayName == "白垩纪" && cretaceousEpoch.DisplayName == "晚白垩世",
+                    "66 Ma 地质年代解析错误");
+            Require(GeologicTimeScale.TryGetCurrent(970f, out GeologicPeriod ancientPeriod,
+                        out GeologicEpoch ancientEpoch) &&
+                    ancientPeriod.DisplayName == "前寒武纪" && !ancientPeriod.HasEpochs,
+                    "970 Ma 前寒武纪解析错误");
+            foreach (TimelineScaleMode mode in new[]
+                     { TimelineScaleMode.RealProportion, TimelineScaleMode.EqualPeriod })
+            {
+                float normalized = GeologicTimeScale.TimeToNormalizedPosition(66f, 970f, mode);
+                float roundTrip = GeologicTimeScale.NormalizedPositionToTime(normalized, 970f, mode);
+                Require(Mathf.Abs(roundTrip - 66f) <= 0.5f,
+                        $"{mode} 时间轴映射往返误差过大");
+            }
+            controller.SetTimeMa(66f);
+            float timeBeforeScaleSwitch = controller.CurrentTimeMa;
+            controller.SetTimelineScaleMode(TimelineScaleMode.EqualPeriod);
+            Require(Mathf.Approximately(controller.CurrentTimeMa, timeBeforeScaleSwitch),
+                    "切换等比例模式改变了当前时间");
+            controller.SetTimelineScaleMode(TimelineScaleMode.RealProportion);
 
             controller.SetTimeMa(7.4f);
             Require(Mathf.Approximately(controller.CurrentTimeMa, 7f), "时间轴没有保持 1 Ma 精度");
@@ -92,12 +120,24 @@ public static class EarthDemoPlayValidation
             Require(ContainsChinese(hoveredName), "悬停区域未默认显示中文名");
             Require(!string.IsNullOrEmpty(hoveredOriginalName) && hoveredOriginalName != hoveredName,
                     "悬停区域没有同时保留英文原名和中文显示名");
+            Require(regions.HoveredBreadcrumb.Count == 2, "悬停没有返回两级区域面包屑");
+            Require(regions.HoveredBreadcrumb[0].Level == 1 &&
+                    regions.HoveredBreadcrumb[1].Level == 2,
+                    "悬停面包屑层级顺序错误");
+            Require(ColorApproximately(
+                        regions.HoveredBreadcrumb[0].Color,
+                        DynamicRegionHighlighter.GetLevelColor(1)) &&
+                    ColorApproximately(
+                        regions.HoveredBreadcrumb[1].Color,
+                        DynamicRegionHighlighter.GetLevelColor(2)),
+                    "面包屑没有使用一级橙色、二级紫色");
             regions.SelectHoveredOrClear();
             Require(regions.SelectedRegionName == hoveredName, "点击选择没有保存悬停区域");
             Require(regions.SelectedRegionOriginalName == hoveredOriginalName,
                     "点击选择没有保存英文原名");
+            Require(regions.SelectedBreadcrumb.Count == 2, "选中没有保留完整祖先链");
             controller.SetTimeMa(1f);
-            Require(regions.SelectedRegionName == hoveredName, "同名区域没有跨年代延续选择");
+            Require(regions.SelectedRegionName == hoveredName, "稳定区域身份没有跨年代延续选择");
             Require(regions.SelectedRegionOriginalName == hoveredOriginalName,
                     "英文原名没有跨年代延续选择");
             controller.SetTimeMa(0f);
@@ -184,7 +224,10 @@ public static class EarthDemoPlayValidation
         EditorApplication.update -= ValidateWhilePlaying;
         EditorApplication.playModeStateChanged -= OnPlayModeChanged;
         EditorApplication.ExitPlaymode();
-        EditorApplication.delayCall += () => EditorApplication.Exit(exitCode);
+        if (Application.isBatchMode)
+        {
+            EditorApplication.delayCall += () => EditorApplication.Exit(exitCode);
+        }
     }
 
     private static void Require(bool condition, string message)
@@ -205,5 +248,12 @@ public static class EarthDemoPlayValidation
             }
         }
         return false;
+    }
+
+    private static bool ColorApproximately(Color first, Color second)
+    {
+        return Mathf.Abs(first.r - second.r) < 0.001f &&
+               Mathf.Abs(first.g - second.g) < 0.001f &&
+               Mathf.Abs(first.b - second.b) < 0.001f;
     }
 }

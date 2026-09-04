@@ -1,8 +1,11 @@
+using System.Collections.Generic;
+using System.Text;
 using UnityEngine;
 
 public sealed class EarthDemoController : MonoBehaviour
 {
     private const float GuiScaleMultiplier = 0.6f;
+    private const float CameraVerticalFramingOffset = -0.45f;
 
     [SerializeField] private Transform earth;
     [SerializeField] private DynamicLandRenderer landRenderer;
@@ -11,6 +14,7 @@ public sealed class EarthDemoController : MonoBehaviour
     [SerializeField] private float dragSensitivity = 0.35f;
     [SerializeField] private float zoomSensitivity = 1.2f;
     [SerializeField] private Vector2 guiReferenceResolution = new Vector2(960f, 540f);
+    [SerializeField] private TimelineScaleMode timelineScaleMode = TimelineScaleMode.RealProportion;
 
     private bool dragging;
     private bool pointerTracking;
@@ -19,21 +23,29 @@ public sealed class EarthDemoController : MonoBehaviour
     private Camera demoCamera;
     private float timeMa;
     private GUIStyle timelinePanelStyle;
-    private GUIStyle timelineTrackStyle;
-    private GUIStyle timelineThumbStyle;
+    private GUIStyle timelineInputStyle;
     private GUIStyle titleStyle;
     private GUIStyle detailStyle;
-    private GUIStyle tickStyle;
+    private GUIStyle breadcrumbStyle;
+    private GUIStyle periodLabelStyle;
+    private GUIStyle narrowPeriodLabelStyle;
+    private GUIStyle currentTimeStyle;
+    private GUIStyle modeActiveStyle;
+    private GUIStyle modeInactiveStyle;
     private GUIStyle resetButtonStyle;
     private GUIStyle regionPanelStyle;
     private GUIStyle regionLabelStyle;
     private Texture2D panelTexture;
-    private Texture2D trackTexture;
-    private Texture2D thumbTexture;
+    private Texture2D whiteTexture;
+    private Texture2D transparentTexture;
+    private Texture2D modeActiveTexture;
+    private Texture2D modeInactiveTexture;
+    private Texture2D resetTexture;
     private Vector3 defaultCameraPosition;
 
     public float CurrentTimeMa => timeMa;
     public float ActiveFrameTimeMa => landRenderer != null ? landRenderer.ActiveFrameTimeMa : -1f;
+    public TimelineScaleMode CurrentTimelineScaleMode => timelineScaleMode;
 
     private void Awake()
     {
@@ -56,6 +68,10 @@ public sealed class EarthDemoController : MonoBehaviour
         }
         if (demoCamera != null)
         {
+            // UI 时间轴固定在底部，运行时把相机整体下移以抬高地球画面。
+            Vector3 framingPosition = demoCamera.transform.position;
+            framingPosition.y += CameraVerticalFramingOffset;
+            demoCamera.transform.position = framingPosition;
             defaultCameraPosition = demoCamera.transform.position;
         }
         ResetView();
@@ -136,9 +152,8 @@ public sealed class EarthDemoController : MonoBehaviour
         Matrix4x4 previousGuiMatrix = GUI.matrix;
         GUI.matrix = Matrix4x4.Scale(new Vector3(guiScale, guiScale, 1f));
 
-        GUI.Label(new Rect(24f, 18f, 520f, 30f), "EARTH EVOLUTION · 动态几何原型", titleStyle);
-        GUI.Label(new Rect(24f, 48f, 680f, 24f),
-            "左键点击选择 · 左键拖动旋转 · 滚轮缩放 · 时间轴精度 1 Ma", detailStyle);
+        GUI.Label(new Rect(24f, 18f, 560f, 30f), "EARTH EVOLUTION · 动态几何原型", titleStyle);
+        DrawCurrentGeologicBreadcrumb(guiWidth);
         if (GUI.Button(GetResetButtonRect(guiWidth), "重置视角（北极朝上）", resetButtonStyle))
         {
             ResetView();
@@ -146,47 +161,189 @@ public sealed class EarthDemoController : MonoBehaviour
 
         Rect regionPanel = GetRegionPanelRect(guiWidth);
         GUI.Box(regionPanel, GUIContent.none, regionPanelStyle);
-        string hovered = regionHighlighter != null && !string.IsNullOrEmpty(regionHighlighter.HoveredRegionName)
-            ? regionHighlighter.HoveredRegionName
+        DrawOutlineRect(regionPanel, new Color(0.38f, 0.62f, 0.82f, 0.85f));
+        string hovered = regionHighlighter != null
+            ? BuildBreadcrumbText(regionHighlighter.HoveredBreadcrumb)
             : "—";
-        string selected = regionHighlighter != null && !string.IsNullOrEmpty(regionHighlighter.SelectedRegionName)
-            ? regionHighlighter.SelectedRegionName
+        string selected = regionHighlighter != null
+            ? BuildBreadcrumbText(regionHighlighter.SelectedBreadcrumb)
             : "—";
-        GUI.Label(new Rect(regionPanel.x + 12f, regionPanel.y + 8f, regionPanel.width - 24f, 28f),
+        GUI.Label(new Rect(regionPanel.x + 12f, regionPanel.y + 7f, regionPanel.width - 24f, 43f),
             $"悬停：{hovered}", regionLabelStyle);
-        GUI.Label(new Rect(regionPanel.x + 12f, regionPanel.y + 39f, regionPanel.width - 24f, 28f),
+        GUI.Label(new Rect(regionPanel.x + 12f, regionPanel.y + 53f, regionPanel.width - 24f, 43f),
             $"已选择：{selected}", regionLabelStyle);
 
         Rect panel = GetTimelinePanelRect(guiWidth, guiHeight);
-        GUI.Box(panel, GUIContent.none, timelinePanelStyle);
-        GUI.Label(new Rect(panel.x + 20f, panel.y + 12f, 180f, 24f), "地质时间", titleStyle);
-        string statistics = landRenderer == null
-            ? "几何数据未加载"
-            : $"{timeMa:0} Ma  ·  几何帧 {landRenderer.ActiveFrameTimeMa:0} Ma  ·  " +
-              $"{landRenderer.ActiveVertexCount:N0} 顶点  ·  切帧 {landRenderer.LastLoadMilliseconds:0.0} ms";
-        GUI.Label(new Rect(panel.x + 180f, panel.y + 14f, panel.width - 200f, 22f), statistics, detailStyle);
-
-        float maxTimeMa = landRenderer != null && landRenderer.MaxTimeMa > 0f ? landRenderer.MaxTimeMa : 1000f;
-        if (terrainRenderer != null && terrainRenderer.MaxTimeMa > 0f)
-        {
-            maxTimeMa = Mathf.Min(maxTimeMa, terrainRenderer.MaxTimeMa);
-        }
-        Rect sliderRect = new Rect(panel.x + 22f, panel.y + 43f, panel.width - 44f, 22f);
-        float timelinePosition = maxTimeMa - timeMa;
-        float nextPosition = GUI.HorizontalSlider(
-            sliderRect, timelinePosition, 0f, maxTimeMa, timelineTrackStyle, timelineThumbStyle);
-        float nextTimeMa = Mathf.Round(maxTimeMa - nextPosition);
-        if (!Mathf.Approximately(nextTimeMa, timeMa))
-        {
-            SetTimeMa(nextTimeMa);
-        }
-
-        float tickY = panel.y + 69f;
-        GUI.Label(new Rect(panel.x + 18f, tickY, 120f, 20f), $"{maxTimeMa:0} Ma", tickStyle);
-        GUI.Label(new Rect(panel.center.x - 55f, tickY, 110f, 20f), $"{maxTimeMa * 0.5f:0} Ma", tickStyle);
-        GUI.Label(new Rect(panel.xMax - 138f, tickY, 120f, 20f), "0 Ma · 现在", tickStyle);
+        DrawTimeline(panel);
 
         GUI.matrix = previousGuiMatrix;
+    }
+
+    private void DrawCurrentGeologicBreadcrumb(float guiWidth)
+    {
+        GeologicPeriod period;
+        GeologicEpoch epoch;
+        GeologicTimeScale.TryGetCurrent(timeMa, out period, out epoch);
+        string text = period.HasEpochs
+            ? $"当前：{period.DisplayName} → {epoch.DisplayName}"
+            : $"当前：{period.DisplayName}";
+        GUI.Label(new Rect(24f, 50f, Mathf.Min(700f, guiWidth - 48f), 32f), text, breadcrumbStyle);
+    }
+
+    private void DrawTimeline(Rect panel)
+    {
+        GUI.Box(panel, GUIContent.none, timelinePanelStyle);
+        DrawOutlineRect(panel, new Color(0.38f, 0.62f, 0.82f, 0.85f));
+        GUI.Label(new Rect(panel.x + 20f, panel.y + 12f, 180f, 28f), "地质时间", titleStyle);
+        DrawScaleModeButtons(panel);
+
+        float maxTimeMa = GetMaximumTimeMa();
+        Rect bandRect = new Rect(panel.x + 22f, panel.y + 76f, panel.width - 44f, 28f);
+        IReadOnlyList<GeologicPeriod> periods = GeologicTimeScale.Periods;
+        for (int index = 0; index < periods.Count; index++)
+        {
+            GeologicPeriod period = periods[index];
+            float start = GeologicTimeScale.TimeToNormalizedPosition(
+                period.OlderMa, maxTimeMa, timelineScaleMode);
+            float end = GeologicTimeScale.TimeToNormalizedPosition(
+                period.YoungerMa, maxTimeMa, timelineScaleMode);
+            Rect segment = new Rect(
+                bandRect.x + bandRect.width * start,
+                bandRect.y,
+                Mathf.Max(1f, bandRect.width * (end - start)),
+                bandRect.height);
+            DrawRect(segment, period.Color);
+            DrawRect(new Rect(segment.x, segment.y, segment.width, 1f), new Color(0.45f, 0.78f, 1f, 0.9f));
+            DrawRect(new Rect(segment.x, segment.yMax - 1f, segment.width, 1f), new Color(0.08f, 0.2f, 0.34f, 0.9f));
+            DrawPeriodLabel(period, index, segment);
+        }
+
+        Rect inputRect = new Rect(bandRect.x - 12f, bandRect.y - 32f, bandRect.width + 24f, 76f);
+        float normalizedPosition = GeologicTimeScale.TimeToNormalizedPosition(
+            timeMa, maxTimeMa, timelineScaleMode);
+        float nextNormalizedPosition = GUI.HorizontalSlider(
+            inputRect, normalizedPosition, 0f, 1f, timelineInputStyle, timelineInputStyle);
+        if (!Mathf.Approximately(nextNormalizedPosition, normalizedPosition))
+        {
+            SetTimeMa(Mathf.Round(GeologicTimeScale.NormalizedPositionToTime(
+                nextNormalizedPosition, maxTimeMa, timelineScaleMode)));
+        }
+
+        DrawEpochTicks(panel, bandRect, maxTimeMa);
+        float playheadX = bandRect.x + bandRect.width * normalizedPosition;
+        DrawRect(new Rect(playheadX - 1f, bandRect.y - 16f, 2f, 56f), new Color(0.2f, 0.9f, 1f, 0.9f));
+        DrawRect(new Rect(playheadX - 7f, bandRect.y - 22f, 14f, 14f), new Color(0.45f, 0.95f, 1f, 1f));
+        DrawRect(new Rect(playheadX - 4f, bandRect.y - 19f, 8f, 8f), new Color(0.05f, 0.2f, 0.35f, 1f));
+
+        Rect currentTimeRect = new Rect(
+            Mathf.Clamp(playheadX - 70f, panel.x + 12f, panel.xMax - 152f),
+            panel.y + 140f,
+            140f,
+            28f);
+        GUI.Box(currentTimeRect, GUIContent.none, timelinePanelStyle);
+        GUI.Label(currentTimeRect, $"当前时间：{timeMa:0} Ma", currentTimeStyle);
+    }
+
+    private void DrawScaleModeButtons(Rect panel)
+    {
+        float buttonWidth = 92f;
+        float buttonY = panel.y + 12f;
+        float firstX = panel.xMax - buttonWidth * 2f - 28f;
+        if (GUI.Button(new Rect(firstX, buttonY, buttonWidth, 26f), "真实比例",
+                timelineScaleMode == TimelineScaleMode.RealProportion ? modeActiveStyle : modeInactiveStyle))
+        {
+            timelineScaleMode = TimelineScaleMode.RealProportion;
+        }
+        if (GUI.Button(new Rect(firstX + buttonWidth + 4f, buttonY, buttonWidth + 16f, 26f), "年代等比例",
+                timelineScaleMode == TimelineScaleMode.EqualPeriod ? modeActiveStyle : modeInactiveStyle))
+        {
+            timelineScaleMode = TimelineScaleMode.EqualPeriod;
+        }
+    }
+
+    private void DrawPeriodLabel(GeologicPeriod period, int index, Rect segment)
+    {
+        if (timelineScaleMode == TimelineScaleMode.EqualPeriod)
+        {
+            GUI.Label(segment, period.DisplayName, periodLabelStyle);
+            return;
+        }
+        bool placeBelowAxis = index == 11;
+        float labelY;
+        if (index == 10)
+        {
+            labelY = segment.y - 34f;
+        }
+        else if (index == 12)
+        {
+            labelY = segment.y - 18f;
+        }
+        else
+        {
+            labelY = placeBelowAxis
+                ? segment.yMax + 18f
+                : segment.y - (index % 2 == 0 ? 34f : 18f);
+        }
+        float labelWidth = 70f;
+        float guiWidth = Screen.width / GetGuiScale();
+        float labelX = Mathf.Clamp(segment.center.x - labelWidth * 0.5f, 8f, guiWidth - labelWidth - 8f);
+        GUI.Label(new Rect(labelX, labelY, labelWidth, 18f), period.DisplayName, narrowPeriodLabelStyle);
+        if (placeBelowAxis)
+        {
+            DrawRect(new Rect(segment.center.x, segment.yMax, 1f, labelY - segment.yMax),
+                new Color(0.3f, 0.75f, 0.95f, 0.65f));
+        }
+        else
+        {
+            DrawRect(new Rect(segment.center.x, labelY + 18f, 1f, segment.y - labelY - 18f),
+                new Color(0.3f, 0.75f, 0.95f, 0.65f));
+        }
+    }
+
+    private void DrawEpochTicks(Rect panel, Rect bandRect, float maxTimeMa)
+    {
+        Color tickColor = new Color(0.25f, 0.72f, 0.86f, 0.85f);
+        float tickY = bandRect.yMax + 9f;
+        foreach (GeologicPeriod period in GeologicTimeScale.Periods)
+        {
+            foreach (GeologicEpoch epoch in period.Epochs)
+            {
+                float position = GeologicTimeScale.TimeToNormalizedPosition(
+                    epoch.OlderMa, maxTimeMa, timelineScaleMode);
+                float x = bandRect.x + bandRect.width * position;
+                DrawRect(new Rect(x, tickY, 1f, 7f), tickColor);
+            }
+        }
+    }
+
+    private float GetMaximumTimeMa()
+    {
+        float maximum = landRenderer != null && landRenderer.MaxTimeMa > 0f ? landRenderer.MaxTimeMa : 1000f;
+        if (terrainRenderer != null && terrainRenderer.MaxTimeMa > 0f)
+        {
+            maximum = Mathf.Min(maximum, terrainRenderer.MaxTimeMa);
+        }
+        if (regionHighlighter != null && regionHighlighter.MaxTimeMa > 0f)
+        {
+            maximum = Mathf.Min(maximum, regionHighlighter.MaxTimeMa);
+        }
+        return maximum;
+    }
+
+    private void DrawRect(Rect rect, Color color)
+    {
+        Color previousColor = GUI.color;
+        GUI.color = color;
+        GUI.DrawTexture(rect, whiteTexture);
+        GUI.color = previousColor;
+    }
+
+    private void DrawOutlineRect(Rect rect, Color color)
+    {
+        DrawRect(new Rect(rect.x, rect.y, rect.width, 1f), color);
+        DrawRect(new Rect(rect.x, rect.yMax - 1f, rect.width, 1f), color);
+        DrawRect(new Rect(rect.x, rect.y, 1f, rect.height), color);
+        DrawRect(new Rect(rect.xMax - 1f, rect.y, 1f, rect.height), color);
     }
 
     public void SetTimeMa(float value)
@@ -204,6 +361,11 @@ public sealed class EarthDemoController : MonoBehaviour
         landRenderer?.SetTimeMa(timeMa);
         terrainRenderer?.SetTimeMa(timeMa);
         regionHighlighter?.SetTimeMa(timeMa);
+    }
+
+    public void SetTimelineScaleMode(TimelineScaleMode mode)
+    {
+        timelineScaleMode = mode;
     }
 
     public void RotateByScreenDelta(Vector2 delta)
@@ -234,8 +396,15 @@ public sealed class EarthDemoController : MonoBehaviour
 
     private static Rect GetTimelinePanelRect(float screenWidth, float screenHeight)
     {
-        float width = Mathf.Min(screenWidth - 36f, 860f);
-        return new Rect((screenWidth - width) * 0.5f, screenHeight - 108f, width, 92f);
+        float width = Mathf.Max(320f, screenWidth - 8f);
+        // 面板只包住标题、纪条、世刻度和当前时间，避免底部出现大块空白。
+        const float panelHeight = 172f;
+        const float bottomMargin = 18f;
+        return new Rect(
+            (screenWidth - width) * 0.5f,
+            screenHeight - panelHeight - bottomMargin,
+            width,
+            panelHeight);
     }
 
     private static Rect GetResetButtonRect(float screenWidth)
@@ -246,7 +415,31 @@ public sealed class EarthDemoController : MonoBehaviour
     private static Rect GetRegionPanelRect(float screenWidth)
     {
         float width = Mathf.Min(360f, Mathf.Max(240f, screenWidth * 0.30f));
-        return new Rect(screenWidth - width - 24f, 60f, width, 76f);
+        return new Rect(screenWidth - width - 24f, 60f, width, 104f);
+    }
+
+    private static string BuildBreadcrumbText(
+        IReadOnlyList<DynamicRegionHighlighter.BreadcrumbItem> items)
+    {
+        if (items == null || items.Count == 0)
+        {
+            return "—";
+        }
+        StringBuilder builder = new StringBuilder();
+        for (int index = 0; index < items.Count; index++)
+        {
+            if (index > 0)
+            {
+                builder.Append(" › ");
+            }
+            DynamicRegionHighlighter.BreadcrumbItem item = items[index];
+            builder.Append("<color=#");
+            builder.Append(ColorUtility.ToHtmlStringRGB(item.Color));
+            builder.Append('>');
+            builder.Append(item.DisplayName);
+            builder.Append("</color>");
+        }
+        return builder.ToString();
     }
 
     private static bool IsPointerOverUi(Vector3 mousePosition, float guiScale)
@@ -273,20 +466,16 @@ public sealed class EarthDemoController : MonoBehaviour
         {
             return;
         }
-        panelTexture = MakeTexture(new Color(0.035f, 0.075f, 0.14f, 0.96f));
-        trackTexture = MakeTexture(new Color(0.20f, 0.52f, 0.82f, 1f));
-        thumbTexture = MakeTexture(new Color(0.35f, 0.92f, 1f, 1f));
+        panelTexture = MakeTexture(new Color(0.025f, 0.065f, 0.13f, 0.92f));
+        whiteTexture = MakeTexture(Color.white);
+        transparentTexture = MakeTexture(new Color(1f, 1f, 1f, 0f));
         timelinePanelStyle = new GUIStyle(GUI.skin.box) { normal = { background = panelTexture } };
-        timelineTrackStyle = new GUIStyle(GUI.skin.horizontalSlider)
+        timelineInputStyle = new GUIStyle(GUI.skin.horizontalSlider)
         {
-            fixedHeight = 6f,
-            normal = { background = trackTexture },
-        };
-        timelineThumbStyle = new GUIStyle(GUI.skin.horizontalSliderThumb)
-        {
-            fixedWidth = 16f,
-            fixedHeight = 24f,
-            normal = { background = thumbTexture },
+            fixedHeight = 40f,
+            normal = { background = transparentTexture },
+            hover = { background = transparentTexture },
+            active = { background = transparentTexture },
         };
         titleStyle = new GUIStyle(GUI.skin.label)
         {
@@ -300,19 +489,58 @@ public sealed class EarthDemoController : MonoBehaviour
             alignment = TextAnchor.MiddleRight,
             normal = { textColor = new Color(0.72f, 0.86f, 1f) },
         };
-        tickStyle = new GUIStyle(detailStyle) { alignment = TextAnchor.MiddleCenter, fontSize = 12 };
+        breadcrumbStyle = new GUIStyle(GUI.skin.label)
+        {
+            fontSize = 20,
+            fontStyle = FontStyle.Bold,
+            normal = { textColor = new Color(0.35f, 0.9f, 1f) },
+        };
+        periodLabelStyle = new GUIStyle(GUI.skin.label)
+        {
+            fontSize = 14,
+            fontStyle = FontStyle.Bold,
+            alignment = TextAnchor.MiddleCenter,
+            normal = { textColor = Color.white },
+        };
+        narrowPeriodLabelStyle = new GUIStyle(periodLabelStyle)
+        {
+            fontSize = 11,
+            normal = { textColor = new Color(0.7f, 0.9f, 1f) },
+        };
+        currentTimeStyle = new GUIStyle(GUI.skin.label)
+        {
+            fontSize = 12,
+            alignment = TextAnchor.MiddleCenter,
+            normal = { textColor = new Color(0.35f, 0.92f, 1f) },
+        };
+        modeActiveTexture = MakeTexture(new Color(0.08f, 0.38f, 0.55f, 0.95f));
+        modeInactiveTexture = MakeTexture(new Color(0.04f, 0.12f, 0.2f, 0.9f));
+        resetTexture = MakeTexture(new Color(0.04f, 0.23f, 0.36f, 0.95f));
+        modeActiveStyle = new GUIStyle(GUI.skin.button)
+        {
+            fontSize = 11,
+            fontStyle = FontStyle.Bold,
+            normal = { textColor = Color.white, background = modeActiveTexture },
+        };
+        modeInactiveStyle = new GUIStyle(GUI.skin.button)
+        {
+            fontSize = 11,
+            normal = { textColor = new Color(0.62f, 0.76f, 0.88f), background = modeInactiveTexture },
+        };
         resetButtonStyle = new GUIStyle(GUI.skin.button)
         {
             fontSize = 12,
             fontStyle = FontStyle.Bold,
-            normal = { textColor = Color.white },
+            normal = { textColor = Color.white, background = resetTexture },
         };
         regionPanelStyle = new GUIStyle(GUI.skin.box) { normal = { background = panelTexture } };
         regionLabelStyle = new GUIStyle(GUI.skin.label)
         {
             fontSize = 13,
-            alignment = TextAnchor.MiddleLeft,
+            alignment = TextAnchor.UpperLeft,
             clipping = TextClipping.Clip,
+            richText = true,
+            wordWrap = true,
             normal = { textColor = Color.white },
         };
     }
@@ -331,7 +559,10 @@ public sealed class EarthDemoController : MonoBehaviour
     private void OnDestroy()
     {
         if (panelTexture != null) Destroy(panelTexture);
-        if (trackTexture != null) Destroy(trackTexture);
-        if (thumbTexture != null) Destroy(thumbTexture);
+        if (whiteTexture != null) Destroy(whiteTexture);
+        if (transparentTexture != null) Destroy(transparentTexture);
+        if (modeActiveTexture != null) Destroy(modeActiveTexture);
+        if (modeInactiveTexture != null) Destroy(modeInactiveTexture);
+        if (resetTexture != null) Destroy(resetTexture);
     }
 }

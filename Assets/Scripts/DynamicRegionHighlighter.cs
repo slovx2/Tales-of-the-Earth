@@ -7,34 +7,43 @@ using UnityEngine.Rendering;
 [RequireComponent(typeof(SphereCollider))]
 public sealed class DynamicRegionHighlighter : MonoBehaviour
 {
+    private static readonly string[] TopologyTypeSuffixes =
+    {
+        "板块", "大陆", "陆块", "地块", "地体", "克拉通", "盆地", "台地",
+        "组合体", "岛弧", "增生区", "核心",
+    };
     [SerializeField] private string datasetRelativePath = "EarthRegions/region_frames.bin";
     [SerializeField] private SphereCollider earthCollider;
     [SerializeField] private Material outlineMaterial;
     [SerializeField] private float outlineRadius = 0.5045f;
-    [SerializeField] private float hoverWidthPixels = 3f;
-    [SerializeField] private float selectedWidthPixels = 4f;
+    [SerializeField] private float hoverLeafWidthPixels = 3f;
+    [SerializeField] private float selectedLeafWidthPixels = 4f;
 
-    private readonly List<LineRenderer> hoverLines = new List<LineRenderer>();
-    private readonly List<LineRenderer> selectedLines = new List<LineRenderer>();
+    private readonly List<LineRenderer> outlineLines = new List<LineRenderer>();
+    private readonly List<float> outlinePixelWidths = new List<float>();
+    private readonly List<BreadcrumbItem> hoveredBreadcrumb = new List<BreadcrumbItem>();
+    private readonly List<BreadcrumbItem> selectedBreadcrumb = new List<BreadcrumbItem>();
     private EarthRegionDataset dataset;
     private EarthRegionNameCatalog nameCatalog;
     private EarthRegionDataset.LoadedFrame activeFrame;
+    private EarthRegionDataset.SelectionKey[] selectedPath;
     private Camera activeCamera;
     private int activeFrameIndex = -1;
-    private int hoveredRegionId = -1;
-    private int selectedRegionId = -1;
-    private string selectedRegionName;
+    private ulong hoveredRegionId;
+    private ulong selectedRegionId;
 
     public float FrameResolutionMa => dataset != null ? dataset.FrameResolutionMa : 0f;
     public float MaxTimeMa => dataset != null ? dataset.MaxTimeMa : 0f;
     public float MinimumAreaKm2 => dataset != null ? dataset.MinimumAreaKm2 : 0f;
     public float ActiveFrameTimeMa => activeFrame != null ? activeFrame.TimeMa : -1f;
-    public int ActiveRegionCount => activeFrame != null ? activeFrame.Regions.Length : 0;
+    public int ActiveRegionCount => activeFrame != null ? activeFrame.Nodes.Length : 0;
     public int LocalizedRegionCount => nameCatalog != null ? nameCatalog.Count : 0;
     public string HoveredRegionName => GetRegionDisplayName(hoveredRegionId);
     public string SelectedRegionName => GetRegionDisplayName(selectedRegionId);
     public string HoveredRegionOriginalName => GetRegionSourceName(hoveredRegionId);
     public string SelectedRegionOriginalName => GetRegionSourceName(selectedRegionId);
+    public IReadOnlyList<BreadcrumbItem> HoveredBreadcrumb => hoveredBreadcrumb;
+    public IReadOnlyList<BreadcrumbItem> SelectedBreadcrumb => selectedBreadcrumb;
 
     private void Awake()
     {
@@ -68,8 +77,14 @@ public sealed class DynamicRegionHighlighter : MonoBehaviour
         {
             return;
         }
-        SetPoolWidth(hoverLines, PixelsToLocalWidth(camera, hoverWidthPixels));
-        SetPoolWidth(selectedLines, PixelsToLocalWidth(camera, selectedWidthPixels));
+        for (int index = 0; index < outlineLines.Count; index++)
+        {
+            if (outlineLines[index].gameObject.activeSelf)
+            {
+                outlineLines[index].widthMultiplier =
+                    PixelsToLocalWidth(camera, outlinePixelWidths[index]);
+            }
+        }
     }
 
     public void SetTimeMa(float timeMa)
@@ -85,27 +100,28 @@ public sealed class DynamicRegionHighlighter : MonoBehaviour
             return;
         }
 
+        EarthRegionDataset.SelectionKey[] previousPath = selectedPath;
         activeFrame = dataset.LoadNearestFrame(timeMa);
         ValidateLocalizedNames(activeFrame);
         activeFrameIndex = activeFrame.FrameIndex;
-        hoveredRegionId = -1;
-        if (!string.IsNullOrEmpty(selectedRegionName) &&
-            activeFrame.TryGetRegion(selectedRegionName, out EarthRegionDataset.Region selected))
+        hoveredRegionId = 0;
+        if (activeFrame.TryResolveSelection(previousPath, out EarthRegionDataset.RegionNode selected))
         {
-            selectedRegionId = selected.Id;
+            selectedRegionId = selected.InstanceId;
+            selectedPath = activeFrame.CreateSelectionPath(selected);
         }
         else
         {
-            selectedRegionId = -1;
-            selectedRegionName = null;
+            selectedRegionId = 0;
+            selectedPath = null;
         }
-        RefreshOutlines();
+        RefreshPresentation();
     }
 
     public void UpdateHover(Camera camera, Vector2 screenPosition)
     {
         activeCamera = camera;
-        int nextRegionId = -1;
+        ulong nextRegionId = 0;
         if (camera != null && earthCollider != null)
         {
             Ray ray = camera.ScreenPointToRay(screenPosition);
@@ -120,71 +136,90 @@ public sealed class DynamicRegionHighlighter : MonoBehaviour
 
     public bool UpdateHoverAtLocalDirection(Vector3 localDirection)
     {
-        int regionId = FindRegionId(localDirection.normalized);
+        ulong regionId = FindRegionId(localDirection.normalized);
         SetHoveredRegion(regionId);
-        return regionId >= 0;
+        return regionId != 0;
     }
 
     public void ClearHover()
     {
-        SetHoveredRegion(-1);
+        SetHoveredRegion(0);
     }
 
     public void SelectHoveredOrClear()
     {
         selectedRegionId = hoveredRegionId;
-        selectedRegionName = GetRegionSourceName(selectedRegionId);
-        RefreshOutlines();
+        if (TryGetNode(selectedRegionId, out EarthRegionDataset.RegionNode selected))
+        {
+            selectedPath = activeFrame.CreateSelectionPath(selected);
+        }
+        else
+        {
+            selectedPath = null;
+        }
+        RefreshPresentation();
     }
 
     public void ClearSelection()
     {
-        selectedRegionId = -1;
-        selectedRegionName = null;
-        RefreshOutlines();
+        selectedRegionId = 0;
+        selectedPath = null;
+        RefreshPresentation();
     }
 
     public bool TryGetRepresentativeDirection(out Vector3 direction)
     {
-        if (activeFrame != null && activeFrame.Regions.Length > 0 &&
-            activeFrame.Regions[0].Polygons.Length > 0)
+        if (activeFrame != null)
         {
-            direction = activeFrame.Regions[0].Polygons[0].ConeCenter;
-            return true;
+            for (int index = activeFrame.Nodes.Length - 1; index >= 0; index--)
+            {
+                EarthRegionDataset.RegionNode node = activeFrame.Nodes[index];
+                if (node.Interactable && node.Polygons.Length > 0 && !string.IsNullOrEmpty(node.Name))
+                {
+                    direction = node.Polygons[0].ConeCenter;
+                    return true;
+                }
+            }
         }
         direction = Vector3.zero;
         return false;
     }
 
-    private int FindRegionId(Vector3 point)
+    private ulong FindRegionId(Vector3 point)
     {
         if (activeFrame == null || point.sqrMagnitude < 0.99f)
         {
-            return -1;
+            return 0;
         }
-        EarthRegionDataset.Region best = null;
-        foreach (EarthRegionDataset.Region region in activeFrame.Regions)
+        EarthRegionDataset.RegionNode best = null;
+        foreach (EarthRegionDataset.RegionNode node in activeFrame.Nodes)
         {
-            bool contains = false;
-            foreach (EarthRegionDataset.RegionPolygon polygon in region.Polygons)
+            if (!node.Interactable || !NodeContains(point, node))
             {
-                if (Vector3.Dot(point, polygon.ConeCenter) + 1e-5f < polygon.ConeMinimumDot)
-                {
-                    continue;
-                }
-                if (PolygonContains(point, polygon))
-                {
-                    contains = true;
-                    break;
-                }
+                continue;
             }
-            if (contains && (best == null || region.AreaKm2 < best.AreaKm2 ||
-                (Mathf.Approximately(region.AreaKm2, best.AreaKm2) && region.Id < best.Id)))
+            if (best == null || node.Level > best.Level ||
+                (node.Level == best.Level && (node.AreaKm2 < best.AreaKm2 ||
+                 (Mathf.Approximately(node.AreaKm2, best.AreaKm2) &&
+                  node.InstanceId < best.InstanceId))))
             {
-                best = region;
+                best = node;
             }
         }
-        return best != null ? best.Id : -1;
+        return best != null ? best.InstanceId : 0;
+    }
+
+    private static bool NodeContains(Vector3 point, EarthRegionDataset.RegionNode node)
+    {
+        foreach (EarthRegionDataset.RegionPolygon polygon in node.Polygons)
+        {
+            if (Vector3.Dot(point, polygon.ConeCenter) + 1e-5f >= polygon.ConeMinimumDot &&
+                PolygonContains(point, polygon))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static bool PolygonContains(Vector3 point, EarthRegionDataset.RegionPolygon polygon)
@@ -227,96 +262,176 @@ public sealed class DynamicRegionHighlighter : MonoBehaviour
         return Math.Abs(winding) > Math.PI;
     }
 
-    private void SetHoveredRegion(int regionId)
+    private void SetHoveredRegion(ulong regionId)
     {
         if (hoveredRegionId == regionId)
         {
             return;
         }
         hoveredRegionId = regionId;
-        RefreshOutlines();
+        RefreshPresentation();
     }
 
-    private string GetRegionSourceName(int regionId)
+    private bool TryGetNode(ulong instanceId, out EarthRegionDataset.RegionNode node)
     {
-        return activeFrame != null && regionId >= 0 &&
-               activeFrame.TryGetRegion(regionId, out EarthRegionDataset.Region region)
-            ? region.Name
+        if (activeFrame != null && instanceId != 0)
+        {
+            return activeFrame.TryGetNode(instanceId, out node);
+        }
+        node = null;
+        return false;
+    }
+
+    private string GetRegionSourceName(ulong instanceId)
+    {
+        return TryGetNode(instanceId, out EarthRegionDataset.RegionNode node)
+            ? node.Name
             : null;
     }
 
-    private string GetRegionDisplayName(int regionId)
+    private string GetRegionDisplayName(ulong instanceId)
     {
-        string sourceName = GetRegionSourceName(regionId);
-        return sourceName != null ? nameCatalog.GetDisplayName(sourceName) : null;
+        return TryGetNode(instanceId, out EarthRegionDataset.RegionNode node)
+            ? GetDisplayName(node)
+            : null;
+    }
+
+    private string GetDisplayName(EarthRegionDataset.RegionNode node)
+    {
+        if (!string.IsNullOrEmpty(node.Name))
+        {
+            string displayName = nameCatalog.GetDisplayName(
+                node.Name, node.Kind == EarthRegionDataset.RegionNodeKind.Topology);
+            if (node.Kind == EarthRegionDataset.RegionNodeKind.Topology &&
+                !HasTopologyTypeSuffix(displayName))
+            {
+                displayName += "板块";
+            }
+            return displayName;
+        }
+        return node.Kind == EarthRegionDataset.RegionNodeKind.Topology
+            ? $"未命名板块（{node.PlateId}）"
+            : $"未命名陆地区域（{node.PlateId}）";
+    }
+
+    private static bool HasTopologyTypeSuffix(string value)
+    {
+        foreach (string suffix in TopologyTypeSuffixes)
+        {
+            if (value.EndsWith(suffix, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void ValidateLocalizedNames(EarthRegionDataset.LoadedFrame frame)
     {
-        foreach (EarthRegionDataset.Region region in frame.Regions)
+        foreach (EarthRegionDataset.RegionNode node in frame.Nodes)
         {
-            nameCatalog.GetDisplayName(region.Name);
+            if (!string.IsNullOrEmpty(node.Name))
+            {
+                nameCatalog.GetDisplayName(node.Name);
+            }
         }
     }
 
-    private void RefreshOutlines()
+    private void RefreshPresentation()
     {
-        EarthRegionDataset.Region selected = null;
-        EarthRegionDataset.Region hovered = null;
-        if (activeFrame != null)
+        BuildBreadcrumb(hoveredRegionId, hoveredBreadcrumb);
+        BuildBreadcrumb(selectedRegionId, selectedBreadcrumb);
+
+        Dictionary<ulong, OutlineRequest> requests = new Dictionary<ulong, OutlineRequest>();
+        AddOutlineChain(selectedRegionId, true, requests);
+        AddOutlineChain(hoveredRegionId, false, requests);
+        List<OutlineRequest> ordered = new List<OutlineRequest>(requests.Values);
+        ordered.Sort((first, second) =>
         {
-            if (selectedRegionId >= 0)
-            {
-                activeFrame.TryGetRegion(selectedRegionId, out selected);
-            }
-            if (hoveredRegionId >= 0 && hoveredRegionId != selectedRegionId)
-            {
-                activeFrame.TryGetRegion(hoveredRegionId, out hovered);
-            }
+            int levelComparison = first.Node.Level.CompareTo(second.Node.Level);
+            return levelComparison != 0
+                ? levelComparison
+                : first.Node.InstanceId.CompareTo(second.Node.InstanceId);
+        });
+        RenderOutlines(ordered);
+    }
+
+    private void BuildBreadcrumb(ulong instanceId, List<BreadcrumbItem> destination)
+    {
+        destination.Clear();
+        if (!TryGetNode(instanceId, out EarthRegionDataset.RegionNode node))
+        {
+            return;
         }
-        RenderRegion(selected, selectedLines, new Color(1f, 1f, 1f, 1f));
-        RenderRegion(hovered, hoverLines, new Color(1f, 1f, 1f, 0.9f));
-        Camera camera = activeCamera != null ? activeCamera : Camera.main;
-        if (camera != null)
+        foreach (EarthRegionDataset.RegionNode ancestor in activeFrame.GetAncestorChain(node))
         {
-            SetPoolWidth(hoverLines, PixelsToLocalWidth(camera, hoverWidthPixels));
-            SetPoolWidth(selectedLines, PixelsToLocalWidth(camera, selectedWidthPixels));
+            destination.Add(new BreadcrumbItem(
+                GetDisplayName(ancestor), ancestor.Name, ancestor.Level, GetLevelColor(ancestor.Level)));
         }
     }
 
-    private void RenderRegion(EarthRegionDataset.Region region, List<LineRenderer> pool, Color color)
+    private void AddOutlineChain(ulong instanceId, bool selected,
+                                 Dictionary<ulong, OutlineRequest> requests)
+    {
+        if (!TryGetNode(instanceId, out EarthRegionDataset.RegionNode node))
+        {
+            return;
+        }
+        EarthRegionDataset.RegionNode[] chain = activeFrame.GetAncestorChain(node);
+        for (int index = 0; index < chain.Length; index++)
+        {
+            float leafWidth = selected ? selectedLeafWidthPixels : hoverLeafWidthPixels;
+            float width = Mathf.Min(selected ? 12f : 11f,
+                leafWidth + (chain.Length - 1 - index) * 2f);
+            OutlineRequest request = new OutlineRequest(chain[index], selected, width);
+            if (!requests.TryGetValue(chain[index].InstanceId, out OutlineRequest existing) ||
+                (selected && !existing.Selected))
+            {
+                requests[chain[index].InstanceId] = request;
+            }
+        }
+    }
+
+    private void RenderOutlines(List<OutlineRequest> requests)
     {
         int used = 0;
-        if (region != null)
+        foreach (OutlineRequest request in requests)
         {
-            foreach (EarthRegionDataset.RegionPolygon polygon in region.Polygons)
+            Color color = GetLevelColor(request.Node.Level);
+            color.a = request.Selected ? 1f : 0.9f;
+            float radius = outlineRadius + Mathf.Min(request.Node.Level, 10) * 0.00015f;
+            foreach (EarthRegionDataset.RegionPolygon polygon in request.Node.Polygons)
             {
                 foreach (EarthRegionDataset.RegionRing ring in polygon.Rings)
                 {
-                    LineRenderer line = GetLine(pool, used++);
+                    LineRenderer line = GetLine(used);
                     line.startColor = color;
                     line.endColor = color;
+                    line.sortingOrder = request.Node.Level;
                     line.positionCount = ring.Vertices.Length;
                     line.loop = true;
-                    for (int index = 0; index < ring.Vertices.Length; index++)
+                    for (int vertexIndex = 0; vertexIndex < ring.Vertices.Length; vertexIndex++)
                     {
-                        line.SetPosition(index, ring.Vertices[index] * outlineRadius);
+                        line.SetPosition(vertexIndex, ring.Vertices[vertexIndex] * radius);
                     }
+                    outlinePixelWidths[used] = request.WidthPixels;
                     line.gameObject.SetActive(true);
+                    used++;
                 }
             }
         }
-        for (int index = used; index < pool.Count; index++)
+        for (int index = used; index < outlineLines.Count; index++)
         {
-            pool[index].gameObject.SetActive(false);
+            outlineLines[index].gameObject.SetActive(false);
         }
+        LateUpdate();
     }
 
-    private LineRenderer GetLine(List<LineRenderer> pool, int index)
+    private LineRenderer GetLine(int index)
     {
-        if (index < pool.Count)
+        if (index < outlineLines.Count)
         {
-            return pool[index];
+            return outlineLines[index];
         }
         GameObject lineObject = new GameObject("Region Outline");
         lineObject.transform.SetParent(transform, false);
@@ -331,8 +446,8 @@ public sealed class DynamicRegionHighlighter : MonoBehaviour
         line.receiveShadows = false;
         line.lightProbeUsage = LightProbeUsage.Off;
         line.reflectionProbeUsage = ReflectionProbeUsage.Off;
-        line.widthMultiplier = 0.005f;
-        pool.Add(line);
+        outlineLines.Add(line);
+        outlinePixelWidths.Add(1f);
         return line;
     }
 
@@ -354,32 +469,57 @@ public sealed class DynamicRegionHighlighter : MonoBehaviour
         return worldWidth / Mathf.Max(1e-5f, uniformScale);
     }
 
-    private static void SetPoolWidth(List<LineRenderer> pool, float width)
+    public static Color GetLevelColor(int level)
     {
-        foreach (LineRenderer line in pool)
+        switch (level)
         {
-            if (line.gameObject.activeSelf)
-            {
-                line.widthMultiplier = width;
-            }
+            case 1: return new Color32(0xFF, 0x9F, 0x1C, 0xFF);
+            case 2: return new Color32(0xB5, 0x6C, 0xFF, 0xFF);
+            case 3: return new Color32(0x35, 0xA7, 0xFF, 0xFF);
+            case 4: return new Color32(0x4E, 0xD4, 0x7B, 0xFF);
+            default: return Color.white;
         }
     }
 
     private void OnDestroy()
     {
         dataset?.Dispose();
-        DestroyPool(hoverLines);
-        DestroyPool(selectedLines);
-    }
-
-    private static void DestroyPool(List<LineRenderer> pool)
-    {
-        foreach (LineRenderer line in pool)
+        foreach (LineRenderer line in outlineLines)
         {
             if (line != null)
             {
                 Destroy(line.gameObject);
             }
+        }
+    }
+
+    public readonly struct BreadcrumbItem
+    {
+        public readonly string DisplayName;
+        public readonly string OriginalName;
+        public readonly int Level;
+        public readonly Color Color;
+
+        public BreadcrumbItem(string displayName, string originalName, int level, Color color)
+        {
+            DisplayName = displayName;
+            OriginalName = originalName;
+            Level = level;
+            Color = color;
+        }
+    }
+
+    private readonly struct OutlineRequest
+    {
+        public readonly EarthRegionDataset.RegionNode Node;
+        public readonly bool Selected;
+        public readonly float WidthPixels;
+
+        public OutlineRequest(EarthRegionDataset.RegionNode node, bool selected, float widthPixels)
+        {
+            Node = node;
+            Selected = selected;
+            WidthPixels = widthPixels;
         }
     }
 }

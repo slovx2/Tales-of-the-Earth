@@ -5,6 +5,7 @@ using UnityEngine;
 public sealed class EarthRegionNameCatalog
 {
     private readonly Dictionary<string, string> displayNames;
+    private readonly Dictionary<string, string> topologyDisplayNames;
 
     public string LanguageCode { get; }
     public int Count => displayNames.Count;
@@ -20,6 +21,7 @@ public sealed class EarthRegionNameCatalog
 
         LanguageCode = document.languageCode;
         displayNames = new Dictionary<string, string>(document.regions.Length, StringComparer.Ordinal);
+        topologyDisplayNames = new Dictionary<string, string>(document.regions.Length, StringComparer.Ordinal);
         foreach (CatalogEntry entry in document.regions)
         {
             if (entry == null || string.IsNullOrWhiteSpace(entry.source) ||
@@ -31,12 +33,16 @@ public sealed class EarthRegionNameCatalog
             {
                 throw new InvalidOperationException($"陆地区域中文名称重复：{entry.source}");
             }
+            topologyDisplayNames.Add(
+                entry.source,
+                string.IsNullOrWhiteSpace(entry.topologyDisplay) ? entry.display : entry.topologyDisplay);
         }
     }
 
-    public string GetDisplayName(string sourceName)
+    public string GetDisplayName(string sourceName, bool topology = false)
     {
-        if (!displayNames.TryGetValue(sourceName, out string displayName))
+        Dictionary<string, string> names = topology ? topologyDisplayNames : displayNames;
+        if (!names.TryGetValue(sourceName, out string displayName))
         {
             throw new KeyNotFoundException($"陆地区域缺少中文名称：{sourceName}");
         }
@@ -55,5 +61,6 @@ public sealed class EarthRegionNameCatalog
     {
         public string source;
         public string display;
+        public string topologyDisplay;
     }
 }

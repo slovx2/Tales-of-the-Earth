@@ -108,16 +108,16 @@ Assets/StreamingAssets/EarthGeometry/land_frames.json
 
 `Assets/StreamingAssets/EarthTerrain/terrain_frames.bin` 是按 `1 Ma` 编译的 `360×180` 半精度有符号高度场。它由 `Tools/build_runtime_terrain.py` 从古地形/古海深合并 NPZ 生成，属于可重建运行时产物，不进入 Git。`DynamicTerrainRenderer` 按时间轴读取单帧并上传复用的 `RHalf Texture2D`，海洋和陆地材质共享该纹理。
 
-`Tools/build_runtime_regions.py` 从同一套 MULLER2022 海岸线命名多边形独立生成区域数据。它逐 `1 Ma` 重建、按完全相同的原始名称合并，并过滤当帧合计面积小于 `250,000 km²` 的区域。边界以约 `25 km` 分段并量化为 `SNORM int16x3` 球面方向，写入：
+`Tools/build_runtime_regions.py` 从 MULLER2022 动态板块拓扑和同源海岸线命名多边形独立生成分层区域数据。每个整数 Ma 都重新解析拓扑并重建陆地：一级是当帧拥有陆地后代的闭合板块拓扑，二级是按父拓扑实例拆分的 Coastline/Static 构造单元。父级边界由全部子陆地在 `25 km` 细分后抵消共享边得到，不会沿板块拓扑穿过海洋。边界量化为 `SNORM int16x3` 球面方向，写入：
 
 ```text
 Assets/StreamingAssets/EarthRegions/region_frames.bin
 Assets/StreamingAssets/EarthRegions/region_frames.json
 ```
 
-运行时只加载当前区域帧；小于阈值的陆地仍然渲染，但不参与悬停和选择。
-区域数据内的英文原名保持不变，继续用于稳定 ID 和跨年代选择；
-`Assets/Resources/EarthRegionNamesZhCn.json` 仅在展示层把源数据全部 642 个原始名称映射为简体中文，UI 默认使用该中文名。
+运行时只加载当前区域帧。所有二级区域和父子关系都会写入；小于 `250,000 km²` 的二级区域不能独立命中，鼠标会回退到其最近可交互祖先。
+区域数据保留英文原名、Feature ID 和 Plate ID；由于源文件少量复用了 Feature ID，二级稳定语义键使用 `Feature ID + 原名`，再结合父 Plate ID 延续跨年代选择；
+`Assets/Resources/EarthRegionNamesZhCn.json` 在展示层覆盖全部海岸线和闭合拓扑源名称，UI 默认使用中文面包屑。
 名称表为每项保留 `basis` 和 `reference`：前者区分惯用译名、组合翻译、审慎音译与原始名称疑误，后者记录核验来源或术语依据。
 
 ## 4. 运行时二进制格式
@@ -193,7 +193,9 @@ Assets/StreamingAssets/EarthRegions/region_frames.json
 - 在底部显示年代、实际几何帧、顶点数和切帧耗时。
 - 区分左键点击与超过 6 像素的拖动，并协调区域悬停、单选和清除选择。
 
-`DynamicRegionHighlighter` 使用地球球体碰撞器把鼠标换算为球面方向，通过包围锥和球面多边形包含测试查询区域。悬停与选中边界使用两套池化白色线条；选择按原始名称跨时间延续，新帧没有该名称时自动清除。
+`DynamicRegionHighlighter` 使用地球球体碰撞器把鼠标换算为球面方向，通过包围锥和球面多边形包含测试查询最深可交互节点。悬停与选中都会绘制完整祖先链，共享祖先去重且选中优先；一级橙、二级紫，格式也预留三级蓝、四级绿和五级以下白色。祖先线更宽、后代线更窄并略微抬高，形成可辨识的彩色套线。选择优先按末级 Feature 语义和父 Plate ID 跨时间延续，末级消失时回退到仍存在的祖先。
+
+中文目录同时保留英文 `source` 和中文 `display`；当同一个源名在陆地单元与一级拓扑中语义不同，可用 `topologyDisplay` 单独给出拓扑译名。例如 `Eurasia` 的二级显示名为“欧亚大陆”，一级显示名为“欧亚板块”。
 
 ## 6. 渲染技术
 
