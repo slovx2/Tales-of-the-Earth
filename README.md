@@ -113,6 +113,41 @@ uv run python Tools/build_runtime_terrain.py \
 
 `terrain_frames.bin` 同样是可重建产物并被 Git 忽略；Unity 运行前必须存在它。
 
+低精度预览数据用于后续拖动性能评估，当前仅生成产物，不接入运行时：
+
+```bash
+uv run python Tools/build_runtime_geometry.py \
+  --time-step-ma 1 \
+  --coastline-km 100 \
+  --surface-km 750 \
+  --max-time-ma 1000 \
+  --out Assets/StreamingAssets/EarthGeometryPreview/land_frames.bin
+
+uv run python Tools/build_runtime_terrain.py \
+  --source-dir .local/research/paleobathymetry-runtime \
+  --width 180 \
+  --height 90 \
+  --max-time-ma 970 \
+  --time-step-ma 1 \
+  --out Assets/StreamingAssets/EarthTerrainPreview/terrain_frames.bin
+
+uv run python Tools/build_runtime_regions.py \
+  --time-step-ma 1 \
+  --coastline-km 100 \
+  --minimum-area-km2 250000 \
+  --max-time-ma 1000 \
+  --out Assets/StreamingAssets/EarthRegionsPreview/region_frames.bin
+```
+
+生成后可用以下命令统计正式/预览数据大小、帧范围和理论内存占用：
+
+```bash
+uv run python Tools/report_runtime_preview.py \
+  --out .local/reports/runtime-preview-data.json
+```
+
+预览数据目前不会被 Unity 默认场景读取；是否接入拖动动态加载，待大小和效果评估后决定。
+
 首次重建需要先生成 `0–970 Ma` 的逐 `1 Ma` 古高程和古海深 NPZ（命令参数见对应原型文档），再执行上述编译命令。运行时地形数据共 `971` 帧、`360×180` 网格，Unity 只加载当前帧。
 
 ## 文档

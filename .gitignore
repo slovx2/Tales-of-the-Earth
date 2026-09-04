@@ -59,6 +59,12 @@ __pycache__/
 /Assets/StreamingAssets/EarthTerrain.meta
 /Assets/StreamingAssets/EarthRegions/
 /Assets/StreamingAssets/EarthRegions.meta
+/Assets/StreamingAssets/EarthGeometryPreview/
+/Assets/StreamingAssets/EarthGeometryPreview.meta
+/Assets/StreamingAssets/EarthTerrainPreview/
+/Assets/StreamingAssets/EarthTerrainPreview.meta
+/Assets/StreamingAssets/EarthRegionsPreview/
+/Assets/StreamingAssets/EarthRegionsPreview.meta
 /Assets/Textures/earth_modern*
 /Assets/Textures/paleo*/
 /Assets/Textures/paleo*.meta
