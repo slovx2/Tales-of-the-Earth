@@ -81,6 +81,11 @@ public sealed class EarthDemoController : MonoBehaviour
             Vector3 framingPosition = demoCamera.transform.position;
             framingPosition.y += CameraVerticalFramingOffset;
             demoCamera.transform.position = framingPosition;
+            // 相机下移后重新对准地球附近的观察中心，避免沿用场景中偏低的
+            // LookAt 目标导致地球整体被推到屏幕上方。
+            Vector3 framingTarget = earth.position;
+            framingTarget.y -= 0.45f;
+            demoCamera.transform.LookAt(framingTarget);
             defaultCameraPosition = demoCamera.transform.position;
         }
         ResetView();
