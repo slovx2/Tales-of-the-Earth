@@ -17,6 +17,9 @@ public sealed class DynamicClimateRenderer : MonoBehaviour
     private byte[] classBytes;
     private int activeFrameIndex = -1;
     private float currentTimeMa;
+    private string datasetPath;
+    private bool retryLoad;
+    private long loadedFileLength;
 
     public bool ClimateAvailable { get; private set; }
     public int Width => dataset != null ? dataset.Width : 0;
@@ -29,26 +32,52 @@ public sealed class DynamicClimateRenderer : MonoBehaviour
     private void Awake()
     {
         if (landRenderer == null) landRenderer = FindRenderer("Dynamic Land");
-        string path = Path.Combine(Application.streamingAssetsPath, datasetRelativePath);
-        if (!File.Exists(path))
+        datasetPath = Path.Combine(Application.streamingAssetsPath, datasetRelativePath);
+        TryLoadDataset();
+    }
+
+    private void Update()
+    {
+        // 支持在 Play Mode 期间生成/替换气候文件，不必重启场景。
+        if (dataset == null && retryLoad && File.Exists(datasetPath))
         {
+            retryLoad = false;
+            TryLoadDataset();
+        }
+        else if (dataset != null && File.Exists(datasetPath) &&
+                 new FileInfo(datasetPath).Length != loadedFileLength)
+        {
+            // 离线编译器替换了整份帧文件时，自动丢弃旧索引并加载新文件。
+            DisposeDatasetResources();
+            TryLoadDataset();
+        }
+    }
+
+    private void TryLoadDataset()
+    {
+        if (!File.Exists(datasetPath))
+        {
+            retryLoad = true;
             ClimateAvailable = false;
             landRenderer?.sharedMaterial.SetFloat("_ClimateAvailable", 0f);
-            UnityEngine.Debug.LogWarning($"未找到气候帧数据，使用中性陆地色：{path}");
+            UnityEngine.Debug.LogWarning($"未找到气候帧数据，使用中性陆地色：{datasetPath}");
             return;
         }
         try
         {
-            dataset = new EarthClimateDataset(path);
+            dataset = new EarthClimateDataset(datasetPath);
+            loadedFileLength = new FileInfo(datasetPath).Length;
             CreateTextures();
             BindTextures();
             SetTimeMa(0f);
+            UnityEngine.Debug.Log($"气候帧已加载：{dataset.Width}×{dataset.Height}，覆盖 0–{dataset.MaxTimeMa:0} Ma");
         }
         catch (Exception exception) when (exception is IOException || exception is InvalidDataException)
         {
             UnityEngine.Debug.LogWarning($"气候数据不可用，将回退中性陆地颜色：{exception.Message}");
             dataset?.Dispose();
             dataset = null;
+            loadedFileLength = 0;
             ClimateAvailable = false;
         }
     }
@@ -116,8 +145,17 @@ public sealed class DynamicClimateRenderer : MonoBehaviour
 
     private void OnDestroy()
     {
+        DisposeDatasetResources();
+    }
+
+    private void DisposeDatasetResources()
+    {
         dataset?.Dispose();
+        dataset = null;
         if (climateTexture != null) Destroy(climateTexture);
         if (climateClassTexture != null) Destroy(climateClassTexture);
+        climateTexture = null;
+        climateClassTexture = null;
+        activeFrameIndex = -1;
     }
 }

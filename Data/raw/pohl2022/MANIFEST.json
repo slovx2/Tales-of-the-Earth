@@ -1,0 +1,176 @@
+{
+  "record_url": "https://zenodo.org/api/records/6620748",
+  "doi": "10.5281/zenodo.6620748",
+  "title": "Phanerozoic continental climate and Köppen–Geiger climate classes",
+  "license": "cc-by-4.0",
+  "files": [
+    {
+      "name": "40Ma_Pohletal2022_DIB_PhaneroContinentalClimate.nc",
+      "size": 8261200,
+      "sha256": "9683008364b0c40d33c9b3c7d6e4e389c66a6aac515daa5a2766b5002a9d47de",
+      "zenodo_checksum": "e9ca6e5e58b7b892c2dfd00fffdcc7af"
+    },
+    {
+      "name": "0Ma_Pohletal2022_DIB_PhaneroContinentalClimate.nc",
+      "size": 8261200,
+      "sha256": "9f6275cc69db7942edc52bcdebb38907efb68407ba25f3bfd55ba3782df0eada",
+      "zenodo_checksum": "b59dacf289dc4a3d01a5c551ffab76f2"
+    },
+    {
+      "name": "100Ma_Pohletal2022_DIB_PhaneroContinentalClimate.nc",
+      "size": 8261200,
+      "sha256": "a219aff44510109b1a5c6355f971385930ac6161abc02589fad488e5459f7123",
+      "zenodo_checksum": "69b44851e9c05aa82be467e38d94e79e"
+    },
+    {
+      "name": "120Ma_Pohletal2022_DIB_PhaneroContinentalClimate.nc",
+      "size": 8261200,
+      "sha256": "bdc20127f186c431b8385b44e751b8d86bfc6b27d80b8f4b37fce172bc4208fa",
+      "zenodo_checksum": "1a518b2ecb281d9d11c34ceb6ccc1b89"
+    },
+    {
+      "name": "140Ma_Pohletal2022_DIB_PhaneroContinentalClimate.nc",
+      "size": 8261200,
+      "sha256": "61dd8149c79ec2f0d28059ecdb70008ddfac0c925e94d27d0c0d9bc43467ae21",
+      "zenodo_checksum": "92e4f4a102f0ab4a4952fd77f58eb9d1"
+    },
+    {
+      "name": "160Ma_Pohletal2022_DIB_PhaneroContinentalClimate.nc",
+      "size": 8261200,
+      "sha256": "01a9b6613edea7eeb1b3093a9b4e98ee240eed369b321a7a51a3dc540832f263",
+      "zenodo_checksum": "24bc51e0994172200472154db0fbb2a8"
+    },
+    {
+      "name": "180Ma_Pohletal2022_DIB_PhaneroContinentalClimate.nc",
+      "size": 8261200,
+      "sha256": "a50e0ddd1cbfbf51816bad5d202dc25162ee318dad447766b88cb274caa65693",
+      "zenodo_checksum": "81e8914ea990fd9424596e567e4e83a8"
+    },
+    {
+      "name": "200Ma_Pohletal2022_DIB_PhaneroContinentalClimate.nc",
+      "size": 8261200,
+      "sha256": "b6f80f5984c11186d61358581374d28ed0533471d9cc86ca77451f0071f41770",
+      "zenodo_checksum": "a6640e578b50c400b3c629935f90362f"
+    },
+    {
+      "name": "20Ma_Pohletal2022_DIB_PhaneroContinentalClimate.nc",
+      "size": 8261200,
+      "sha256": "a5a0cf8fac084a350f481cc8e3a7aacae72b12d246d8409d606483afac84336b",
+      "zenodo_checksum": "70a1c7dd3f5f9fd5f4ea2c6dd32479f4"
+    },
+    {
+      "name": "220Ma_Pohletal2022_DIB_PhaneroContinentalClimate.nc",
+      "size": 8261200,
+      "sha256": "58ff6af38b1ec6854f9ffeea586c8b1d95d90cfbaa5db7e252b0d3ca23a4f510",
+      "zenodo_checksum": "3f06ee4ad52174f90d11cb88fadda3fa"
+    },
+    {
+      "name": "240Ma_Pohletal2022_DIB_PhaneroContinentalClimate.nc",
+      "size": 8261200,
+      "sha256": "d9fadb1064e823ec1402d2da04b69292dca8439bf5bfb4f3418960e990cdbcb8",
+      "zenodo_checksum": "ba341fb934cd1ce731898a2204011fd9"
+    },
+    {
+      "name": "260Ma_Pohletal2022_DIB_PhaneroContinentalClimate.nc",
+      "size": 8261200,
+      "sha256": "e8ba11fe7f20ae5187b05a73d431067aaab790c840302e5b35601c388836dc45",
+      "zenodo_checksum": "db94c785a4cc80e8bab2ade9ece3731d"
+    },
+    {
+      "name": "280Ma_Pohletal2022_DIB_PhaneroContinentalClimate.nc",
+      "size": 8261200,
+      "sha256": "c84fa0a4eb2abbcf66167dc471280f461999e17b95bebedd0a7658a619fdcfaa",
+      "zenodo_checksum": "647c45292571863595c69d96f5fecabb"
+    },
+    {
+      "name": "80Ma_Pohletal2022_DIB_PhaneroContinentalClimate.nc",
+      "size": 8261200,
+      "sha256": "be368a9e400a79b37df5b547fbf36f20e5ea684802ef316fdca974ebb0ed232b",
+      "zenodo_checksum": "d0bad2bb5e8ecd0cf000290b57e95bf7"
+    },
+    {
+      "name": "60Ma_Pohletal2022_DIB_PhaneroContinentalClimate.nc",
+      "size": 8261200,
+      "sha256": "ebf2dcf78bafa6f99080d7d9b0aa1d2949e9a611466341e0a855b2c82e154223",
+      "zenodo_checksum": "e63eea1ec689547ace668091e30f7c41"
+    },
+    {
+      "name": "540Ma_Pohletal2022_DIB_PhaneroContinentalClimate.nc",
+      "size": 8261200,
+      "sha256": "a91eb32cd378db37eee37f18d3fe94b4100c89181dd36a92926d55635b696ab4",
+      "zenodo_checksum": "93e78d4290f53dd5a4eb6561fc973122"
+    },
+    {
+      "name": "520Ma_Pohletal2022_DIB_PhaneroContinentalClimate.nc",
+      "size": 8261200,
+      "sha256": "ef6a339a73a4daff8a2b36f74f266d11eff57253dd7039423c1a238633dbf767",
+      "zenodo_checksum": "7fbb8cc77137bf489d66b6d86a6523cc"
+    },
+    {
+      "name": "500Ma_Pohletal2022_DIB_PhaneroContinentalClimate.nc",
+      "size": 8261200,
+      "sha256": "ca49473d73e0c1801b7978cd0ddaaee2c8051ec3cd54f6b3afad436b018ef1de",
+      "zenodo_checksum": "98eb10a145c70fc0b22c4503aeb9eac8"
+    },
+    {
+      "name": "480Ma_Pohletal2022_DIB_PhaneroContinentalClimate.nc",
+      "size": 8261200,
+      "sha256": "315579a4b6562f20c373e523c6e5c24529d133a5589abdf8224f147d5c19901e",
+      "zenodo_checksum": "99b3d6cfaf3c49d4e0dd682118b22b16"
+    },
+    {
+      "name": "460Ma_Pohletal2022_DIB_PhaneroContinentalClimate.nc",
+      "size": 8261200,
+      "sha256": "0c4d72d63986c7cf36f687f8527b5a8ca7f7b18e1c36ba96d2c8984fc4f49e8c",
+      "zenodo_checksum": "578204ef9a5d161f3fe58dfdf2b9f83c"
+    },
+    {
+      "name": "440Ma_Pohletal2022_DIB_PhaneroContinentalClimate.nc",
+      "size": 8261200,
+      "sha256": "1fd8770a067efee3af5149368d4542425b0ff83f339bfb801b269861480d217a",
+      "zenodo_checksum": "9ac951a60fa1f6efb4b10b59e333b2f8"
+    },
+    {
+      "name": "420Ma_Pohletal2022_DIB_PhaneroContinentalClimate.nc",
+      "size": 8261200,
+      "sha256": "8bd8427171e9b23e27a1eb1bb6abd4e89d356ce01ed1f5c82184b496f3d44e1a",
+      "zenodo_checksum": "6276088fe4a493ea9fd5bf95decd07b3"
+    },
+    {
+      "name": "400Ma_Pohletal2022_DIB_PhaneroContinentalClimate.nc",
+      "size": 8261200,
+      "sha256": "7a150c04883c83fc4f8c4389ce2c845ac8938481990b17aae20e645014992bbb",
+      "zenodo_checksum": "62d5e6a48a5e348ec8b3c69e0a897cfc"
+    },
+    {
+      "name": "380Ma_Pohletal2022_DIB_PhaneroContinentalClimate.nc",
+      "size": 8261200,
+      "sha256": "b5611273e64bb0736870a8fd0ba63db9a56b9531f34bd68a1195e69d71b800a9",
+      "zenodo_checksum": "c09c5a0f98bfc6c4e54538ccd3dfc471"
+    },
+    {
+      "name": "360Ma_Pohletal2022_DIB_PhaneroContinentalClimate.nc",
+      "size": 8261200,
+      "sha256": "36fd79ca1aeb9eaa8373312d56eabae3c60b8b04cad70ca174cdaa378da9695a",
+      "zenodo_checksum": "b555ef0093e15986329e34d739c1ec67"
+    },
+    {
+      "name": "340Ma_Pohletal2022_DIB_PhaneroContinentalClimate.nc",
+      "size": 8261200,
+      "sha256": "8cd33f3c97fbed68a595b8b5dbead44237cece5e5cea145c0a9abeaf20fa18be",
+      "zenodo_checksum": "34cef718bc5a2b80f0ce63821aea41a8"
+    },
+    {
+      "name": "320Ma_Pohletal2022_DIB_PhaneroContinentalClimate.nc",
+      "size": 8261200,
+      "sha256": "3528698200923f60b745535ff1b343e52324db5a94b31e30ded62425ede11f97",
+      "zenodo_checksum": "8ea7cc64b416ea7e44f6b4406ee66477"
+    },
+    {
+      "name": "300Ma_Pohletal2022_DIB_PhaneroContinentalClimate.nc",
+      "size": 8261200,
+      "sha256": "7ffad843b4fa6f526471cd7be819596e31c3bb9fe6619030f153b1c469ce71d4",
+      "zenodo_checksum": "1f4160d103115ec2ca16738d56b46005"
+    }
+  ]
+}

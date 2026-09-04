@@ -363,29 +363,22 @@ def compute_transition(
     land = np.asarray(land_mask, dtype=bool)
     secondary = primary.copy()
     blend = np.zeros(primary.shape, dtype=np.float32)
-    height, width = primary.shape
-    for y in range(height):
-        for x in range(width):
-            if not land[y, x] or primary[y, x] == 0:
-                primary[y, x] = secondary[y, x] = 0
+    counts = np.zeros(primary.shape + (14,), dtype=np.uint8)
+    different = np.zeros(primary.shape, dtype=np.uint8)
+    for dy in (-1, 0, 1):
+        for dx in (-1, 0, 1):
+            if dx == 0 and dy == 0:
                 continue
-            counts = np.zeros(14, dtype=np.int32)
-            different = 0
-            for dy in (-1, 0, 1):
-                for dx in (-1, 0, 1):
-                    if dx == 0 and dy == 0:
-                        continue
-                    ny = y + dy
-                    nx = (x + dx) % width
-                    if ny < 0 or ny >= height or not land[ny, nx]:
-                        continue
-                    category = int(primary[ny, nx])
-                    if category != int(primary[y, x]) and category > 0:
-                        counts[category] += 1
-                        different += 1
-            if different:
-                secondary[y, x] = np.uint8(np.argmax(counts))
-                blend[y, x] = np.float32(min(0.5, different / 8.0 * 0.5))
+            neighbour = np.roll(primary, (dy, dx), axis=(0, 1))
+            neighbour_land = np.roll(land, (dy, dx), axis=(0, 1))
+            boundary = land & neighbour_land & (neighbour > 0) & (neighbour != primary)
+            different += boundary
+            for category in range(1, 14):
+                counts[..., category] += boundary & (neighbour == category)
+    has_boundary = different > 0
+    secondary[has_boundary] = np.argmax(counts[has_boundary], axis=-1).astype(np.uint8)
+    blend[has_boundary] = np.minimum(0.5, different[has_boundary].astype(np.float32) / 16.0)
+    primary[~land] = secondary[~land] = 0
     return primary, secondary, blend
 
 
