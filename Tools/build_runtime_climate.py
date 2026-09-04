@@ -73,17 +73,17 @@ def nearest_land_mask(mask_dir: Path | None, time_ma: float, width: int, height:
 
 
 def encode_frame(climate: ClassifiedClimate) -> bytes:
-    """每像素 4×float16 + 4×uint8，小端序、北纬到南纬。"""
+    """按 Unity 读取器约定写出平面布局：连续变量区 + 类别区。"""
     height, width = climate.primary_class.shape
     continuous = np.stack((climate.annual_temperature, climate.annual_precipitation,
                            climate.annual_runoff, np.where(climate.valid, climate.confidence, 0.0)), axis=-1)
-    values = np.empty((height, width, 12), dtype=np.uint8)
-    values[..., :8] = continuous.astype("<f2").view(np.uint8).reshape(height, width, 8)
-    values[..., 8] = climate.primary_class
-    values[..., 9] = climate.secondary_class
-    values[..., 10] = np.rint(np.clip(climate.blend_weight, 0.0, 0.5) * 255.0).astype(np.uint8)
-    values[..., 11] = np.where(climate.valid, np.rint(np.clip(climate.confidence, 0.0, 1.0) * 255.0), 0).astype(np.uint8)
-    return values.tobytes()
+    continuous_bytes = continuous.astype("<f2", copy=False).tobytes()
+    classes = np.empty((height, width, 4), dtype=np.uint8)
+    classes[..., 0] = climate.primary_class
+    classes[..., 1] = climate.secondary_class
+    classes[..., 2] = np.rint(np.clip(climate.blend_weight, 0.0, 0.5) * 255.0).astype(np.uint8)
+    classes[..., 3] = np.where(climate.valid, np.rint(np.clip(climate.confidence, 0.0, 1.0) * 255.0), 0).astype(np.uint8)
+    return continuous_bytes + classes.tobytes()
 
 
 def interpolate_pair(
@@ -144,7 +144,7 @@ def write_dataset(
         "time_coverage_ma": [0, max_time_ma],
         "grid": f"{width}x{height}",
         "frame_count": len(times),
-        "encoding": "annual MAT/precipitation/runoff/valid float16 + primary/secondary/blend/valid uint8",
+        "encoding": "planar continuous RGBAHalf (annual temperature/precipitation/runoff/confidence) followed by RGBA32 (primary/secondary/blend/confidence)",
         "file_size_bytes": out.stat().st_size,
         "file_sha256": sha256(out),
         "pohl_files": [{"time_ma": t, "file": str(p), "sha256": sha256(p)} for t, p in files],

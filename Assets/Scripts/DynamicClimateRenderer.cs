@@ -20,6 +20,7 @@ public sealed class DynamicClimateRenderer : MonoBehaviour
     private string datasetPath;
     private bool retryLoad;
     private long loadedFileLength;
+    private long loadedFileWriteTimeUtcTicks;
 
     public bool ClimateAvailable { get; private set; }
     public int Width => dataset != null ? dataset.Width : 0;
@@ -44,12 +45,16 @@ public sealed class DynamicClimateRenderer : MonoBehaviour
             retryLoad = false;
             TryLoadDataset();
         }
-        else if (dataset != null && File.Exists(datasetPath) &&
-                 new FileInfo(datasetPath).Length != loadedFileLength)
+        else if (dataset != null && File.Exists(datasetPath))
         {
-            // 离线编译器替换了整份帧文件时，自动丢弃旧索引并加载新文件。
-            DisposeDatasetResources();
-            TryLoadDataset();
+            FileInfo fileInfo = new FileInfo(datasetPath);
+            if (fileInfo.Length != loadedFileLength ||
+                fileInfo.LastWriteTimeUtc.Ticks != loadedFileWriteTimeUtcTicks)
+            {
+                // 离线编译器替换了整份帧文件时，自动丢弃旧索引并加载新文件。
+                DisposeDatasetResources();
+                TryLoadDataset();
+            }
         }
     }
 
@@ -66,7 +71,9 @@ public sealed class DynamicClimateRenderer : MonoBehaviour
         try
         {
             dataset = new EarthClimateDataset(datasetPath);
-            loadedFileLength = new FileInfo(datasetPath).Length;
+            FileInfo fileInfo = new FileInfo(datasetPath);
+            loadedFileLength = fileInfo.Length;
+            loadedFileWriteTimeUtcTicks = fileInfo.LastWriteTimeUtc.Ticks;
             CreateTextures();
             BindTextures();
             SetTimeMa(0f);
@@ -78,6 +85,7 @@ public sealed class DynamicClimateRenderer : MonoBehaviour
             dataset?.Dispose();
             dataset = null;
             loadedFileLength = 0;
+            loadedFileWriteTimeUtcTicks = 0;
             ClimateAvailable = false;
         }
     }

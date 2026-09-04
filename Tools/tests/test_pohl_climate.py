@@ -10,6 +10,7 @@ TOOLS_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(TOOLS_DIR))
 
 from pohl_climate import (  # noqa: E402
+    ClassifiedClimate,
     KOPPEN_AF,
     KOPPEN_BW,
     KOPPEN_EF,
@@ -23,6 +24,7 @@ from pohl_climate import (  # noqa: E402
     target_cell_centres,
     PohlClimateSlice,
 )
+from build_runtime_climate import encode_frame  # noqa: E402
 
 
 class PohlClimateTests(unittest.TestCase):
@@ -73,6 +75,24 @@ class PohlClimateTests(unittest.TestCase):
         self.assertGreater(float(blend[0, 1]), 0.0)
         self.assertEqual(int(secondary[0, 1]), 10)
         self.assertEqual(int(blend[0, 3]), 0)
+
+    def test_runtime_frame_uses_planar_texture_layout(self) -> None:
+        climate = ClassifiedClimate(
+            annual_temperature=np.asarray([[1.0, 2.0]], dtype=np.float32),
+            annual_precipitation=np.asarray([[10.0, 20.0]], dtype=np.float32),
+            annual_runoff=np.asarray([[3.0, 4.0]], dtype=np.float32),
+            primary_class=np.asarray([[9, 10]], dtype=np.uint8),
+            secondary_class=np.asarray([[8, 11]], dtype=np.uint8),
+            blend_weight=np.asarray([[0.0, 0.5]], dtype=np.float32),
+            valid=np.asarray([[True, False]]),
+            confidence=np.asarray([[1.0, 0.0]], dtype=np.float32),
+        )
+        payload = encode_frame(climate)
+        continuous = np.frombuffer(payload[:2 * 8], dtype='<f2').reshape(2, 4)
+        classes = np.frombuffer(payload[2 * 8:], dtype=np.uint8).reshape(2, 4)
+        np.testing.assert_array_equal(continuous[0], [1.0, 10.0, 3.0, 1.0])
+        np.testing.assert_array_equal(continuous[1], [2.0, 20.0, 4.0, 0.0])
+        np.testing.assert_array_equal(classes, [[9, 8, 0, 255], [10, 11, 128, 0]])
 
 
 if __name__ == "__main__":
