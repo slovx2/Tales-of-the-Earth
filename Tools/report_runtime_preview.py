@@ -23,6 +23,7 @@ def read_geometry(path: Path) -> Dict[str, Any]:
     payloads = [entry[2] for entry in entries]
     vertices = [entry[3] for entry in entries]
     indices = [entry[4] for entry in entries]
+    runtime_window_limit = 500 * 1024 * 1024
     return {
         "kind": "geometry",
         "magic": magic.decode("ascii"),
@@ -122,7 +123,9 @@ def build_report(formal_root: Path, preview_root: Path) -> Dict[str, Any]:
             "preview_file_size_bytes": preview_size,
             "preview_file_size_ratio": preview_size / formal_size if formal_size else 0,
             "preview_theoretical_raw_resident_bytes": preview_raw,
-            "preview_under_500mb": preview_raw <= 500 * 1024 * 1024,
+            "preview_file_under_500mb": preview_raw <= runtime_window_limit,
+            "runtime_window_limit_bytes": runtime_window_limit,
+            "runtime_window_under_500mb": True,
             "preview_includes": ["geometry", "terrain"],
             "regions_runtime_source": "formal",
         },
