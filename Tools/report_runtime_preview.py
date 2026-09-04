@@ -110,6 +110,7 @@ def build_report(formal_root: Path, preview_root: Path) -> Dict[str, Any]:
     formal_size = sum(item["file_size_bytes"] for item in formal.values())
     preview_size = sum(item["file_size_bytes"] for item in preview.values())
     preview_raw = sum(item["theoretical_raw_resident_bytes"] for item in preview.values())
+    runtime_window_limit = 500 * 1024 * 1024
     for kind, preview_item in preview.items():
         formal_size_for_kind = formal[kind]["file_size_bytes"]
         preview_item["file_size_ratio_vs_formal"] = (
