@@ -9,5 +9,20 @@
     "sha256": "add1f4975360ecd259517b99860f4fb0d176170d909333387e8022c69255bbcd",
     "local": "Data/raw/gplates/Muller_etal_2022_SE_v1.2.4.zip",
     "timespan_ma": [0, 1000]
+  },
+  "pohl2022_foam_climate": {
+    "url": "https://zenodo.org/api/records/6620748",
+    "doi": "10.5281/zenodo.6620748",
+    "license": "CC BY 4.0 (按 Zenodo 记录说明)",
+    "timespan_ma": [0, 540],
+    "time_slices": 28,
+    "variables": {
+      "tssub1": "monthly near-surface temperature (degC)",
+      "precip": "monthly precipitation (mm/day)",
+      "rnf": "monthly runoff (mm/day)",
+      "topo": "land/topography validity mask",
+      "koppen": "published Köppen class, 1–13 (not copied to runtime)"
+    },
+    "local": "Data/raw/pohl2022"
   }
 }

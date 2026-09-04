@@ -47,7 +47,7 @@ public static class EarthDemoBuilder
         GameObject earth = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         earth.name = "Earth";
         // 为底部时间轴预留完整的可视空间，避免地球下缘落入 UI 面板。
-        earth.transform.localPosition = new Vector3(0f, 0.85f, 0f);
+        earth.transform.localPosition = new Vector3(0f, 0.70f, 0f);
         earth.transform.localScale = Vector3.one * 2.35f;
         earth.transform.rotation = Quaternion.Euler(0f, 25f, -8f);
 
@@ -80,7 +80,6 @@ public static class EarthDemoBuilder
         landMaterial.SetColor("_DesertColor", new Color(0.62f, 0.50f, 0.29f, 1f));
         landMaterial.SetColor("_RockColor", new Color(0.34f, 0.30f, 0.24f, 1f));
         landMaterial.SetColor("_SnowColor", new Color(0.86f, 0.90f, 0.89f, 1f));
-        landMaterial.SetFloat("_BiomeScale", 3.8f);
         landMaterial.SetFloat("_DetailScale", 26f);
         landMaterial.SetFloat("_DetailStrength", 0.09f);
         landMeshRenderer.sharedMaterial = landMaterial;
@@ -91,6 +90,11 @@ public static class EarthDemoBuilder
         serializedTerrain.FindProperty("landRenderer").objectReferenceValue = landMeshRenderer;
         serializedTerrain.FindProperty("oceanRenderer").objectReferenceValue = earth.GetComponent<Renderer>();
         serializedTerrain.ApplyModifiedPropertiesWithoutUndo();
+
+        DynamicClimateRenderer dynamicClimate = earth.AddComponent<DynamicClimateRenderer>();
+        SerializedObject serializedClimate = new SerializedObject(dynamicClimate);
+        serializedClimate.FindProperty("landRenderer").objectReferenceValue = landMeshRenderer;
+        serializedClimate.ApplyModifiedPropertiesWithoutUndo();
 
         Shader regionShader = Shader.Find("Earth/RegionOutline");
         if (regionShader == null)
@@ -125,6 +129,7 @@ public static class EarthDemoBuilder
         serializedController.FindProperty("earth").objectReferenceValue = earth.transform;
         serializedController.FindProperty("landRenderer").objectReferenceValue = dynamicLand;
         serializedController.FindProperty("terrainRenderer").objectReferenceValue = dynamicTerrain;
+        serializedController.FindProperty("climateRenderer").objectReferenceValue = dynamicClimate;
         serializedController.FindProperty("regionHighlighter").objectReferenceValue = regionHighlighter;
         serializedController.ApplyModifiedPropertiesWithoutUndo();
 

@@ -12,6 +12,7 @@ public sealed class EarthDemoController : MonoBehaviour
     [SerializeField] private Transform earth;
     [SerializeField] private DynamicLandRenderer landRenderer;
     [SerializeField] private DynamicTerrainRenderer terrainRenderer;
+    [SerializeField] private DynamicClimateRenderer climateRenderer;
     [SerializeField] private DynamicRegionHighlighter regionHighlighter;
     [SerializeField] private float dragSensitivity = 0.35f;
     [SerializeField] private float zoomSensitivity = 1.2f;
@@ -70,6 +71,10 @@ public sealed class EarthDemoController : MonoBehaviour
         if (terrainRenderer == null)
         {
             terrainRenderer = earth.GetComponent<DynamicTerrainRenderer>();
+        }
+        if (climateRenderer == null)
+        {
+            climateRenderer = earth.GetComponent<DynamicClimateRenderer>();
         }
         if (regionHighlighter == null)
         {
@@ -417,6 +422,7 @@ public sealed class EarthDemoController : MonoBehaviour
         {
             landRenderer?.SetTimeMa(pendingTimelineTimeMa);
             terrainRenderer?.SetTimeMa(pendingTimelineTimeMa);
+            climateRenderer?.SetTimeMa(pendingTimelineTimeMa);
             lastPrimaryAppliedTimeMa = pendingTimelineTimeMa;
             lastPrimaryTimelineUpdateTime = now;
         }

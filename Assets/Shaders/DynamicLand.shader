@@ -8,11 +8,14 @@ Shader "Earth/DynamicLand"
         _DesertColor ("沙漠", Color) = (0.62, 0.50, 0.29, 1)
         _RockColor ("岩石", Color) = (0.34, 0.30, 0.24, 1)
         _SnowColor ("冰雪", Color) = (0.86, 0.90, 0.89, 1)
-        _BiomeScale ("生物群落尺度", Range(1, 10)) = 3.8
         _DetailScale ("地表细节尺度", Range(8, 64)) = 26
         _DetailStrength ("地表细节强度", Range(0, 0.3)) = 0.09
         _TerrainTex ("古地形高度场", 2D) = "black" {}
         _TerrainGrid ("高度场网格", Vector) = (360, 180, 0.00278, 0.00556)
+        _ClimateTex ("气候连续变量", 2D) = "black" {}
+        _ClimateClassTex ("Köppen 类别", 2D) = "black" {}
+        _ClimateGrid ("气候网格", Vector) = (360, 180, 0.00278, 0.00556)
+        _ClimateAvailable ("气候数据可用", Float) = 0
         _Emission ("环境光", Range(0, 1)) = 0.035
         _SurfaceOffset ("球面偏移", Range(1.0, 1.02)) = 1.003
     }
@@ -41,11 +44,14 @@ Shader "Earth/DynamicLand"
             fixed4 _DesertColor;
             fixed4 _RockColor;
             fixed4 _SnowColor;
-            half _BiomeScale;
             half _DetailScale;
             half _DetailStrength;
             sampler2D _TerrainTex;
             float4 _TerrainGrid;
+            sampler2D _ClimateTex;
+            sampler2D _ClimateClassTex;
+            float4 _ClimateGrid;
+            half _ClimateAvailable;
             half _Emission;
             half _SurfaceOffset;
 
@@ -97,6 +103,19 @@ Shader "Earth/DynamicLand"
                 return total;
             }
 
+            fixed3 climateColor(float category)
+            {
+                if (category >= 12.5) return _ForestColor.rgb; // Af
+                if (category >= 11.5) return lerp(_ForestColor.rgb, _GrassColor.rgb, 0.35); // Am
+                if (category >= 10.5) return lerp(_GrassColor.rgb, _DryGrassColor.rgb, 0.35); // Aw
+                if (category >= 9.5) return lerp(_GrassColor.rgb, _DryGrassColor.rgb, 0.35); // BS
+                if (category >= 8.5) return _DesertColor.rgb; // BW
+                if (category >= 5.5) return _ForestColor.rgb; // C/Df
+                if (category >= 2.5) return lerp(_ForestColor.rgb, _DryGrassColor.rgb, 0.28); // Ds/Dw
+                if (category >= 1.5) return _SnowColor.rgb; // EF
+                return lerp(_SnowColor.rgb, _RockColor.rgb, 0.25); // ET
+            }
+
             v2f vert(appdata input)
             {
                 v2f output;
@@ -110,50 +129,44 @@ Shader "Earth/DynamicLand"
             fixed4 frag(v2f input) : SV_Target
             {
                 float3 sphere = normalize(input.spherePosition);
-                float latitude = abs(sphere.z);
                 // 运行时显示坐标将数学坐标的 Y 轴反射回来，保持高度场经度与陆地一致。
                 float longitude = atan2(-sphere.y, sphere.x);
                 float2 terrainUv = float2(longitude / 6.2831853 + 0.5,
                                            0.5 - asin(sphere.z) / 3.14159265);
                 float elevation = tex2D(_TerrainTex, terrainUv).r;
                 float elevationFactor = saturate((elevation - 150.0) / 2800.0);
-                float macro = fbm(sphere * _BiomeScale + float3(7.1, 19.3, 31.7));
-                float moistureNoise = fbm(sphere * (_BiomeScale * 1.37) + float3(41.2, 3.7, 17.9));
                 float detail = fbm(sphere * _DetailScale + float3(13.4, 53.1, 5.8));
                 float ridges = 1.0 - abs(fbm(sphere * 12.0 + 73.2) * 2.0 - 1.0);
 
-                float climateLatitude = saturate(
-                    latitude + (macro - 0.5) * 0.20 + (moistureNoise - 0.5) * 0.08);
-
-                float subtropicalBand = smoothstep(0.15, 0.30, climateLatitude) *
-                                         (1.0 - smoothstep(0.38, 0.57, climateLatitude));
-                float equatorialHumidity = 1.0 - smoothstep(0.08, 0.29, climateLatitude);
-                float humidity = saturate(
-                    0.28 + moistureNoise * 0.64 + equatorialHumidity * 0.15 -
-                    subtropicalBand * 0.34 - climateLatitude * 0.10);
-                float dryness = saturate(1.0 - humidity + (macro - 0.5) * 0.22);
-
-                float desert = smoothstep(0.61, 0.87, dryness) *
-                               (1.0 - smoothstep(0.70, 0.84, climateLatitude));
-                float forest = smoothstep(0.48, 0.78, humidity) * (1.0 - desert);
-                float dryGrass = smoothstep(0.32, 0.64, dryness) * (1.0 - desert);
-
-                fixed3 land = _GrassColor.rgb;
-                land = lerp(land, _DryGrassColor.rgb, dryGrass);
-                land = lerp(land, _DesertColor.rgb, desert);
-                land = lerp(land, _ForestColor.rgb, forest * 0.88);
-
-                // 高地场仅用于打破纯色，真实山脉位置由后续古高程场负责。
-                float highland = max(smoothstep(0.72, 0.91, ridges + (macro - 0.5) * 0.22),
+                // FBM 仅用于小尺度地表扰动和高程辅助，不再决定大陆级生物群系。
+                float highland = max(smoothstep(0.72, 0.91, ridges),
                                      smoothstep(0.42, 0.82, elevationFactor));
-                highland *= 1.0 - forest * 0.55;
-                land = lerp(land, _RockColor.rgb, highland * 0.38);
-
-                float polarClimate = smoothstep(
-                    0.84, 0.97, climateLatitude + (detail - 0.5) * 0.04);
                 float mountainSnow = highland * smoothstep(0.68, 0.90, elevationFactor) * 0.8;
-                float snow = saturate(max(polarClimate, mountainSnow));
-                land = lerp(land, _SnowColor.rgb, snow);
+                float snow = saturate(mountainSnow);
+
+                // 气候场决定大陆尺度生物群系；FBM 仅保留为小尺度表面扰动。
+                fixed4 climate = tex2D(_ClimateTex, terrainUv);
+                fixed4 climateClass = tex2D(_ClimateClassTex, terrainUv);
+                float primary = floor(climateClass.r * 255.0 + 0.5);
+                float secondary = floor(climateClass.g * 255.0 + 0.5);
+                float transition = climateClass.b;
+                fixed3 climateLand = climateColor(primary);
+                fixed3 climateSecondary = climateColor(secondary);
+                climateLand = lerp(climateLand, climateSecondary, saturate(transition * 2.0));
+                float climateWeight = saturate(_ClimateAvailable) * step(0.003, climateClass.a) * saturate(climate.a + 0.15);
+                // 连续变量用于类别内的轻微修正，避免类别纹理呈完全平坦色块。
+                float wetness = saturate(climate.g / 2400.0);
+                climateLand = lerp(climateLand, climateLand * (0.88 + wetness * 0.12), climateWeight);
+                // 高海拔只提高裸岩和积雪权重，不改写 Köppen 主分类。
+                float climateColdness = saturate((8.0 - climate.r) / 18.0);
+                float climateSnow = step(1.5, primary) * max(smoothstep(0.45, 0.85, elevationFactor), climateColdness * 0.35);
+                climateLand = lerp(climateLand, _SnowColor.rgb, climateSnow * 0.55);
+                // 没有气候帧时不再伪造大陆级气候纹理，只保留中性陆地、地形和细节扰动。
+                fixed3 neutralLand = lerp(_GrassColor.rgb, _DryGrassColor.rgb, 0.15);
+                neutralLand = lerp(neutralLand, _RockColor.rgb, highland * 0.38);
+                neutralLand = lerp(neutralLand, _SnowColor.rgb, snow * 0.45);
+                fixed3 land = neutralLand;
+                land = lerp(neutralLand, climateLand, climateWeight);
 
                 float surfaceVariation = lerp(1.0 - _DetailStrength, 1.0 + _DetailStrength, detail);
                 land *= surfaceVariation;

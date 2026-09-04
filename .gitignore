@@ -49,6 +49,7 @@ __pycache__/
 
 # 离线管线可重建中间产物
 /Data/processed/
+/Data/raw/pohl2022/*.nc
 /Data/raw/**/extracted/
 /Data/raw/gplates/Animations.zip
 
@@ -65,6 +66,8 @@ __pycache__/
 /Assets/StreamingAssets/EarthTerrainPreview.meta
 /Assets/StreamingAssets/EarthRegionsPreview/
 /Assets/StreamingAssets/EarthRegionsPreview.meta
+/Assets/StreamingAssets/EarthClimate/
+/Assets/StreamingAssets/EarthClimate.meta
 /Assets/Textures/earth_modern*
 /Assets/Textures/paleo*/
 /Assets/Textures/paleo*.meta

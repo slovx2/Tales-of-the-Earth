@@ -52,11 +52,18 @@ public static class EarthDemoPlayValidation
             EarthDemoController controller = UnityEngine.Object.FindObjectOfType<EarthDemoController>();
             DynamicLandRenderer land = UnityEngine.Object.FindObjectOfType<DynamicLandRenderer>();
             DynamicTerrainRenderer terrain = UnityEngine.Object.FindObjectOfType<DynamicTerrainRenderer>();
+            DynamicClimateRenderer climate = UnityEngine.Object.FindObjectOfType<DynamicClimateRenderer>();
             DynamicRegionHighlighter regions = UnityEngine.Object.FindObjectOfType<DynamicRegionHighlighter>();
             Require(controller != null, "Play Mode 中找不到 EarthDemoController");
             Require(land != null, "Play Mode 中找不到 DynamicLandRenderer");
             Require(terrain != null && terrain.Width == 360 && terrain.Height == 180,
                     "Play Mode 中动态高度场未加载");
+            Require(climate != null, "Play Mode 中找不到 DynamicClimateRenderer");
+            if (climate.Width > 0)
+            {
+                Require(climate.Width == 360 && climate.Height == 180,
+                        "Play Mode 中气候网格不是 360×180");
+            }
             Require(regions != null, "Play Mode 中动态区域未加载");
             Require(land.FrameResolutionMa > 0f, "几何帧时间分辨率无效");
             Require(Mathf.Approximately(regions.FrameResolutionMa, 1f), "区域帧没有保持 1 Ma 精度");
@@ -66,13 +73,15 @@ public static class EarthDemoPlayValidation
                     "中文区域名称没有覆盖全部陆地和拓扑源名称");
             Require(land.CoastlineResolutionKm > 0f, "海岸线空间精度无效");
             Material landMaterial = land.GetComponent<Renderer>().sharedMaterial;
-            Require(landMaterial != null && landMaterial.HasProperty("_BiomeScale"),
-                    "Play Mode 未加载卫星风格陆地材质");
-            Require(landMaterial.GetFloat("_BiomeScale") > 0f &&
-                    landMaterial.GetFloat("_DetailStrength") > 0f,
-                    "卫星风格陆地材质参数无效");
+            Require(landMaterial != null && landMaterial.HasProperty("_ClimateTex"),
+                    "Play Mode 未加载气候陆地材质");
+            Require(landMaterial.GetFloat("_DetailStrength") > 0f,
+                    "陆地表面细节参数无效");
             Require(landMaterial.GetTexture("_TerrainTex") != null,
                     "Play Mode 中陆地材质未绑定高度场");
+            Require(landMaterial.HasProperty("_ClimateTex") &&
+                    landMaterial.HasProperty("_ClimateClassTex"),
+                    "Play Mode 中陆地材质未提供气候接口");
             Renderer oceanRenderer = GameObject.Find("Earth").GetComponent<Renderer>();
             Require(oceanRenderer.sharedMaterial.GetTexture("_TerrainTex") != null,
                     "Play Mode 中海洋材质未绑定海深场");

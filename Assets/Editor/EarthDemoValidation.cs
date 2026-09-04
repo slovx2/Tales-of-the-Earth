@@ -14,6 +14,7 @@ public static class EarthDemoValidation
         EarthDemoController controller = earth != null ? earth.GetComponent<EarthDemoController>() : null;
         DynamicLandRenderer dynamicLand = land != null ? land.GetComponent<DynamicLandRenderer>() : null;
         DynamicTerrainRenderer dynamicTerrain = earth != null ? earth.GetComponent<DynamicTerrainRenderer>() : null;
+        DynamicClimateRenderer dynamicClimate = earth != null ? earth.GetComponent<DynamicClimateRenderer>() : null;
         DynamicRegionHighlighter regionHighlighter = earth != null ? earth.GetComponent<DynamicRegionHighlighter>() : null;
         Renderer oceanRenderer = earth != null ? earth.GetComponent<Renderer>() : null;
         Renderer landRenderer = land != null ? land.GetComponent<Renderer>() : null;
@@ -23,13 +24,16 @@ public static class EarthDemoValidation
         Require(controller != null, "Earth 缺少 EarthDemoController");
         Require(dynamicLand != null, "场景缺少 DynamicLandRenderer");
         Require(dynamicTerrain != null, "场景缺少 DynamicTerrainRenderer");
+        Require(dynamicClimate != null, "场景缺少 DynamicClimateRenderer");
         Require(regionHighlighter != null, "场景缺少 DynamicRegionHighlighter");
         Require(oceanRenderer != null && oceanRenderer.sharedMaterial != null, "Earth 缺少海洋材质");
         Require(oceanRenderer.sharedMaterial.shader.name == "Earth/DynamicOcean", "Earth 未使用动态海洋 Shader");
         Require(landRenderer != null && landRenderer.sharedMaterial != null, "动态陆地缺少材质");
         Require(landRenderer.sharedMaterial.shader.name == "Earth/DynamicLand", "陆地未使用动态几何 Shader");
         Require(landRenderer.sharedMaterial.HasProperty("_ForestColor"), "陆地材质缺少卫星风格森林色");
-        Require(landRenderer.sharedMaterial.HasProperty("_BiomeScale"), "陆地材质缺少球面生物群落参数");
+        Require(landRenderer.sharedMaterial.HasProperty("_ClimateTex") &&
+                landRenderer.sharedMaterial.HasProperty("_ClimateClassTex"),
+                "陆地材质缺少气候场接口");
         Require(landRenderer.sharedMaterial.GetFloat("_DetailStrength") > 0f,
                 "陆地卫星风格细节未启用");
         Require(landRenderer.sharedMaterial.HasProperty("_TerrainTex") &&
