@@ -7,15 +7,22 @@ using UnityEngine;
 public sealed class DynamicTerrainRenderer : MonoBehaviour
 {
     [SerializeField] private string datasetRelativePath = "EarthTerrain/terrain_frames.bin";
+    [SerializeField] private string previewDatasetRelativePath = "EarthTerrainPreview/terrain_frames.bin";
     [SerializeField] private Renderer landRenderer;
     [SerializeField] private Renderer oceanRenderer;
 
     private EarthTerrainDataset dataset;
+    private EarthTerrainDataset formalDataset;
+    private EarthTerrainDataset previewDataset;
+    private bool previewMode;
+    private float currentTimeMa;
     private Texture2D terrainTexture;
     private byte[] frameBytes;
     private int activeFrameIndex = -1;
 
     public float FrameResolutionMa => dataset != null ? dataset.TimeResolutionMa : 0f;
+    public bool IsPreviewMode => previewMode;
+    public bool PreviewAvailable => previewDataset != null;
     public float MaxTimeMa => dataset != null ? dataset.MaxTimeMa : 0f;
     public int Width => dataset != null ? dataset.Width : 0;
     public int Height => dataset != null ? dataset.Height : 0;
@@ -26,15 +33,14 @@ public sealed class DynamicTerrainRenderer : MonoBehaviour
     {
         string path = Path.Combine(Application.streamingAssetsPath, datasetRelativePath);
         if (!File.Exists(path)) throw new FileNotFoundException("找不到地球地形帧数据", path);
-        dataset = new EarthTerrainDataset(path);
-        frameBytes = new byte[dataset.Width * dataset.Height * sizeof(ushort)];
-        terrainTexture = new Texture2D(dataset.Width, dataset.Height, TextureFormat.RHalf, false, true)
+        formalDataset = new EarthTerrainDataset(path);
+        dataset = formalDataset;
+        string previewPath = Path.Combine(Application.streamingAssetsPath, previewDatasetRelativePath);
+        if (File.Exists(previewPath))
         {
-            name = "Dynamic Earth Terrain",
-            wrapMode = TextureWrapMode.Repeat,
-            filterMode = FilterMode.Bilinear,
-            anisoLevel = 0,
-        };
+            previewDataset = new EarthTerrainDataset(previewPath, preloadToMemory: true);
+        }
+        CreateTextureForDataset();
         if (landRenderer == null) landRenderer = FindRenderer("Dynamic Land");
         if (oceanRenderer == null) oceanRenderer = GetComponent<Renderer>();
         BindTexture(landRenderer);
@@ -45,6 +51,7 @@ public sealed class DynamicTerrainRenderer : MonoBehaviour
     public void SetTimeMa(float timeMa)
     {
         if (dataset == null) return;
+        currentTimeMa = timeMa;
         int frameIndex = Mathf.Clamp(Mathf.RoundToInt(timeMa / dataset.TimeResolutionMa), 0, dataset.FrameCount - 1);
         if (frameIndex == activeFrameIndex) return;
         Stopwatch timer = Stopwatch.StartNew();
@@ -55,6 +62,34 @@ public sealed class DynamicTerrainRenderer : MonoBehaviour
         activeFrameIndex = frameIndex;
         ActiveFrameTimeMa = dataset.GetFrameTime(frameIndex);
         LastUploadMilliseconds = timer.Elapsed.TotalMilliseconds;
+    }
+
+    public void SetPreviewMode(bool enabled)
+    {
+        if (enabled == previewMode || (enabled && previewDataset == null)) return;
+        previewMode = enabled;
+        dataset = previewMode ? previewDataset : formalDataset;
+        CreateTextureForDataset();
+        activeFrameIndex = -1;
+        SetTimeMa(currentTimeMa);
+    }
+
+    private void CreateTextureForDataset()
+    {
+        if (terrainTexture != null)
+        {
+            Destroy(terrainTexture);
+        }
+        frameBytes = new byte[dataset.Width * dataset.Height * sizeof(ushort)];
+        terrainTexture = new Texture2D(dataset.Width, dataset.Height, TextureFormat.RHalf, false, true)
+        {
+            name = "Dynamic Earth Terrain",
+            wrapMode = TextureWrapMode.Repeat,
+            filterMode = FilterMode.Bilinear,
+            anisoLevel = 0,
+        };
+        BindTexture(landRenderer);
+        BindTexture(oceanRenderer);
     }
 
     private void BindTexture(Renderer renderer)
@@ -72,7 +107,8 @@ public sealed class DynamicTerrainRenderer : MonoBehaviour
 
     private void OnDestroy()
     {
-        dataset?.Dispose();
+        if (previewDataset != null && previewDataset != formalDataset) previewDataset.Dispose();
+        formalDataset?.Dispose();
         if (terrainTexture != null) Destroy(terrainTexture);
     }
 }

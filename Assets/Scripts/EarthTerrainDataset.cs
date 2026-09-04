@@ -5,7 +5,7 @@ using UnityEngine;
 public sealed class EarthTerrainDataset : IDisposable
 {
     private const int FileVersion = 1;
-    private readonly FileStream stream;
+    private readonly Stream stream;
     private readonly BinaryReader reader;
     private readonly FrameEntry[] frames;
     private readonly byte[] bytes;
@@ -16,9 +16,11 @@ public sealed class EarthTerrainDataset : IDisposable
     public int FrameCount => frames.Length;
     public float MaxTimeMa => frames.Length == 0 ? 0f : frames[frames.Length - 1].TimeMa;
 
-    public EarthTerrainDataset(string path)
+    public EarthTerrainDataset(string path, bool preloadToMemory = false)
     {
-        stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+        stream = preloadToMemory
+            ? new MemoryStream(File.ReadAllBytes(path), writable: false)
+            : new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
         reader = new BinaryReader(stream);
         string magic = new string(reader.ReadChars(4));
         int version = reader.ReadInt32();

@@ -142,7 +142,7 @@ public sealed class EarthDemoController : MonoBehaviour
             }
         }
 
-        if (dragging || pointerOverUi)
+        if (dragging || timelineDragging || pointerOverUi)
         {
             regionHighlighter?.ClearHover();
         }
@@ -153,7 +153,7 @@ public sealed class EarthDemoController : MonoBehaviour
 
         if (timelineDragging && !Input.GetMouseButton(0))
         {
-            timelineDragging = false;
+            EndTimelineDrag();
             ApplyPendingTimelineTime(true);
         }
         else
@@ -245,7 +245,7 @@ public sealed class EarthDemoController : MonoBehaviour
         bool releaseTimelineDrag = false;
         if (timelineEventTarget && timelineEvent.type == EventType.MouseDown && timelineEvent.button == 0)
         {
-            timelineDragging = true;
+            BeginTimelineDrag();
         }
         else if (timelineDragging && timelineEvent.type == EventType.MouseUp && timelineEvent.button == 0)
         {
@@ -261,7 +261,7 @@ public sealed class EarthDemoController : MonoBehaviour
         }
         if (releaseTimelineDrag)
         {
-            timelineDragging = false;
+            EndTimelineDrag();
             ApplyPendingTimelineTime(true);
         }
 
@@ -416,8 +416,9 @@ public sealed class EarthDemoController : MonoBehaviour
             lastPrimaryTimelineUpdateTime = now;
         }
 
-        bool updateRegion = force || !timelineDragging ||
-                            now - lastRegionTimelineUpdateTime >= TimelineRegionUpdateInterval;
+        // 拖动期间不解析区域帧，避免边界重建抢占游标和预览几何的更新预算。
+        bool updateRegion = !timelineDragging && (force ||
+                            now - lastRegionTimelineUpdateTime >= TimelineRegionUpdateInterval);
         if (updateRegion && !Mathf.Approximately(lastRegionAppliedTimeMa, pendingTimelineTimeMa))
         {
             regionHighlighter?.SetTimeMa(pendingTimelineTimeMa);
@@ -427,6 +428,23 @@ public sealed class EarthDemoController : MonoBehaviour
 
         hasPendingTimelineTime = !Mathf.Approximately(lastPrimaryAppliedTimeMa, pendingTimelineTimeMa) ||
                                  !Mathf.Approximately(lastRegionAppliedTimeMa, pendingTimelineTimeMa);
+    }
+
+    private void BeginTimelineDrag()
+    {
+        if (timelineDragging) return;
+        timelineDragging = true;
+        regionHighlighter?.ClearHover();
+        landRenderer?.SetPreviewMode(true);
+        terrainRenderer?.SetPreviewMode(true);
+    }
+
+    private void EndTimelineDrag()
+    {
+        if (!timelineDragging) return;
+        timelineDragging = false;
+        landRenderer?.SetPreviewMode(false);
+        terrainRenderer?.SetPreviewMode(false);
     }
 
     private float ClampAndRoundTime(float value)

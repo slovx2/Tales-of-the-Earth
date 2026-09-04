@@ -113,11 +113,11 @@ uv run python Tools/build_runtime_terrain.py \
 
 `terrain_frames.bin` 同样是可重建产物并被 Git 忽略；Unity 运行前必须存在它。
 
-低精度预览数据用于后续拖动性能评估，当前仅生成产物，不接入运行时：
+低精度预览数据用于时间轴拖动期间的快速显示。预览只降低空间精度并采用 `5 Ma` 时间步长；区域边界始终使用正式数据，拖动期间不刷新悬停边界，仅保留当前选中边界。
 
 ```bash
 uv run python Tools/build_runtime_geometry.py \
-  --time-step-ma 1 \
+  --time-step-ma 5 \
   --coastline-km 100 \
   --surface-km 750 \
   --max-time-ma 1000 \
@@ -128,15 +128,8 @@ uv run python Tools/build_runtime_terrain.py \
   --width 180 \
   --height 90 \
   --max-time-ma 970 \
-  --time-step-ma 1 \
+  --time-step-ma 5 \
   --out Assets/StreamingAssets/EarthTerrainPreview/terrain_frames.bin
-
-uv run python Tools/build_runtime_regions.py \
-  --time-step-ma 1 \
-  --coastline-km 100 \
-  --minimum-area-km2 250000 \
-  --max-time-ma 1000 \
-  --out Assets/StreamingAssets/EarthRegionsPreview/region_frames.bin
 ```
 
 生成后可用以下命令统计正式/预览数据大小、帧范围和理论内存占用：
@@ -146,7 +139,7 @@ uv run python Tools/report_runtime_preview.py \
   --out .local/reports/runtime-preview-data.json
 ```
 
-预览数据目前不会被 Unity 默认场景读取；是否接入拖动动态加载，待大小和效果评估后决定。
+Unity 在拖动开始时切换到几何与地形预览数据，松开后恢复正式精度并精确加载目标帧。预览文件全量预加载到内存，不实现动态窗口淘汰；区域数据不生成预览副本。
 
 首次重建需要先生成 `0–970 Ma` 的逐 `1 Ma` 古高程和古海深 NPZ（命令参数见对应原型文档），再执行上述编译命令。运行时地形数据共 `971` 帧、`360×180` 网格，Unity 只加载当前帧。
 

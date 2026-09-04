@@ -105,7 +105,6 @@ def build_report(formal_root: Path, preview_root: Path) -> Dict[str, Any]:
     preview = {
         "geometry": read_geometry(preview_root / "EarthGeometryPreview/land_frames.bin"),
         "terrain": read_terrain(preview_root / "EarthTerrainPreview/terrain_frames.bin"),
-        "regions": read_regions(preview_root / "EarthRegionsPreview/region_frames.bin"),
     }
     formal_size = sum(item["file_size_bytes"] for item in formal.values())
     preview_size = sum(item["file_size_bytes"] for item in preview.values())
@@ -124,6 +123,8 @@ def build_report(formal_root: Path, preview_root: Path) -> Dict[str, Any]:
             "preview_file_size_ratio": preview_size / formal_size if formal_size else 0,
             "preview_theoretical_raw_resident_bytes": preview_raw,
             "preview_under_500mb": preview_raw <= 500 * 1024 * 1024,
+            "preview_includes": ["geometry", "terrain"],
+            "regions_runtime_source": "formal",
         },
     }
 

@@ -8,14 +8,21 @@ using UnityEngine.Rendering;
 public sealed class DynamicLandRenderer : MonoBehaviour
 {
     [SerializeField] private string datasetRelativePath = "EarthGeometry/land_frames.bin";
+    [SerializeField] private string previewDatasetRelativePath = "EarthGeometryPreview/land_frames.bin";
 
     private EarthGeometryDataset dataset;
+    private EarthGeometryDataset formalDataset;
+    private EarthGeometryDataset previewDataset;
+    private bool previewMode;
+    private float currentTimeMa;
     private Mesh landMesh;
     private int activeFrameIndex = -1;
     private double totalLoadMilliseconds;
     private int loadCount;
 
     public float FrameResolutionMa => dataset != null ? dataset.TimeResolutionMa : 0f;
+    public bool IsPreviewMode => previewMode;
+    public bool PreviewAvailable => previewDataset != null;
     public float CoastlineResolutionKm => dataset != null ? dataset.CoastlineResolutionKm : 0f;
     public float MaxTimeMa => dataset != null ? dataset.MaxTimeMa : 0f;
     public float ActiveFrameTimeMa { get; private set; } = -1f;
@@ -33,7 +40,13 @@ public sealed class DynamicLandRenderer : MonoBehaviour
             throw new FileNotFoundException("找不到地球几何帧数据", datasetPath);
         }
 
-        dataset = new EarthGeometryDataset(datasetPath);
+        formalDataset = new EarthGeometryDataset(datasetPath);
+        dataset = formalDataset;
+        string previewPath = Path.Combine(Application.streamingAssetsPath, previewDatasetRelativePath);
+        if (File.Exists(previewPath))
+        {
+            previewDataset = new EarthGeometryDataset(previewPath, preloadToMemory: true);
+        }
         landMesh = new Mesh
         {
             name = "Dynamic Earth Land",
@@ -52,6 +65,7 @@ public sealed class DynamicLandRenderer : MonoBehaviour
             return;
         }
 
+        currentTimeMa = timeMa;
         int requestedFrame = Mathf.Clamp(
             Mathf.RoundToInt(timeMa / dataset.TimeResolutionMa),
             0,
@@ -83,9 +97,19 @@ public sealed class DynamicLandRenderer : MonoBehaviour
         loadCount++;
     }
 
+    public void SetPreviewMode(bool enabled)
+    {
+        if (enabled == previewMode || (enabled && previewDataset == null)) return;
+        previewMode = enabled;
+        dataset = previewMode ? previewDataset : formalDataset;
+        activeFrameIndex = -1;
+        SetTimeMa(currentTimeMa);
+    }
+
     private void OnDestroy()
     {
-        dataset?.Dispose();
+        if (previewDataset != null && previewDataset != formalDataset) previewDataset.Dispose();
+        formalDataset?.Dispose();
         if (landMesh != null)
         {
             Destroy(landMesh);
