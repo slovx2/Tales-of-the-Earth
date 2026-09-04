@@ -6,6 +6,8 @@ public sealed class EarthDemoController : MonoBehaviour
 {
     private const float GuiScaleMultiplier = 0.6f;
     private const float CameraVerticalFramingOffset = -0.45f;
+    private const float TimelinePrimaryUpdateInterval = 1f / 24f;
+    private const float TimelineRegionUpdateInterval = 1f / 10f;
 
     [SerializeField] private Transform earth;
     [SerializeField] private DynamicLandRenderer landRenderer;
@@ -18,10 +20,17 @@ public sealed class EarthDemoController : MonoBehaviour
 
     private bool dragging;
     private bool pointerTracking;
+    private bool timelineDragging;
+    private bool hasPendingTimelineTime;
     private Vector3 lastMouse;
     private Vector3 pointerDownPosition;
     private Camera demoCamera;
     private float timeMa;
+    private float pendingTimelineTimeMa;
+    private float lastPrimaryTimelineUpdateTime = float.NegativeInfinity;
+    private float lastRegionTimelineUpdateTime = float.NegativeInfinity;
+    private float lastPrimaryAppliedTimeMa = float.NaN;
+    private float lastRegionAppliedTimeMa = float.NaN;
     private GUIStyle timelinePanelStyle;
     private GUIStyle timelineInputStyle;
     private GUIStyle titleStyle;
@@ -141,6 +150,16 @@ public sealed class EarthDemoController : MonoBehaviour
         {
             regionHighlighter?.UpdateHover(demoCamera, Input.mousePosition);
         }
+
+        if (timelineDragging && !Input.GetMouseButton(0))
+        {
+            timelineDragging = false;
+            ApplyPendingTimelineTime(true);
+        }
+        else
+        {
+            ApplyPendingTimelineTime(false);
+        }
     }
 
     private void OnGUI()
@@ -221,12 +240,29 @@ public sealed class EarthDemoController : MonoBehaviour
         Rect inputRect = new Rect(bandRect.x - 12f, bandRect.y - 32f, bandRect.width + 24f, 76f);
         float normalizedPosition = GeologicTimeScale.TimeToNormalizedPosition(
             timeMa, maxTimeMa, timelineScaleMode);
+        Event timelineEvent = Event.current;
+        bool timelineEventTarget = inputRect.Contains(timelineEvent.mousePosition);
+        bool releaseTimelineDrag = false;
+        if (timelineEventTarget && timelineEvent.type == EventType.MouseDown && timelineEvent.button == 0)
+        {
+            timelineDragging = true;
+        }
+        else if (timelineDragging && timelineEvent.type == EventType.MouseUp && timelineEvent.button == 0)
+        {
+            releaseTimelineDrag = true;
+        }
         float nextNormalizedPosition = GUI.HorizontalSlider(
             inputRect, normalizedPosition, 0f, 1f, timelineInputStyle, timelineInputStyle);
         if (!Mathf.Approximately(nextNormalizedPosition, normalizedPosition))
         {
-            SetTimeMa(Mathf.Round(GeologicTimeScale.NormalizedPositionToTime(
+            normalizedPosition = nextNormalizedPosition;
+            RequestTimelineTime(Mathf.Round(GeologicTimeScale.NormalizedPositionToTime(
                 nextNormalizedPosition, maxTimeMa, timelineScaleMode)));
+        }
+        if (releaseTimelineDrag)
+        {
+            timelineDragging = false;
+            ApplyPendingTimelineTime(true);
         }
 
         DrawEpochTicks(panel, bandRect, maxTimeMa);
@@ -348,6 +384,53 @@ public sealed class EarthDemoController : MonoBehaviour
 
     public void SetTimeMa(float value)
     {
+        timeMa = ClampAndRoundTime(value);
+        pendingTimelineTimeMa = timeMa;
+        hasPendingTimelineTime = true;
+        ApplyPendingTimelineTime(true);
+    }
+
+    private void RequestTimelineTime(float value)
+    {
+        timeMa = ClampAndRoundTime(value);
+        pendingTimelineTimeMa = timeMa;
+        hasPendingTimelineTime = true;
+        ApplyPendingTimelineTime(false);
+    }
+
+    private void ApplyPendingTimelineTime(bool force)
+    {
+        if (!hasPendingTimelineTime)
+        {
+            return;
+        }
+
+        float now = Time.unscaledTime;
+        bool updatePrimary = force || !timelineDragging ||
+                             now - lastPrimaryTimelineUpdateTime >= TimelinePrimaryUpdateInterval;
+        if (updatePrimary && !Mathf.Approximately(lastPrimaryAppliedTimeMa, pendingTimelineTimeMa))
+        {
+            landRenderer?.SetTimeMa(pendingTimelineTimeMa);
+            terrainRenderer?.SetTimeMa(pendingTimelineTimeMa);
+            lastPrimaryAppliedTimeMa = pendingTimelineTimeMa;
+            lastPrimaryTimelineUpdateTime = now;
+        }
+
+        bool updateRegion = force || !timelineDragging ||
+                            now - lastRegionTimelineUpdateTime >= TimelineRegionUpdateInterval;
+        if (updateRegion && !Mathf.Approximately(lastRegionAppliedTimeMa, pendingTimelineTimeMa))
+        {
+            regionHighlighter?.SetTimeMa(pendingTimelineTimeMa);
+            lastRegionAppliedTimeMa = pendingTimelineTimeMa;
+            lastRegionTimelineUpdateTime = now;
+        }
+
+        hasPendingTimelineTime = !Mathf.Approximately(lastPrimaryAppliedTimeMa, pendingTimelineTimeMa) ||
+                                 !Mathf.Approximately(lastRegionAppliedTimeMa, pendingTimelineTimeMa);
+    }
+
+    private float ClampAndRoundTime(float value)
+    {
         float maximum = landRenderer != null && landRenderer.MaxTimeMa > 0f ? landRenderer.MaxTimeMa : 1000f;
         if (terrainRenderer != null && terrainRenderer.MaxTimeMa > 0f)
         {
@@ -357,10 +440,7 @@ public sealed class EarthDemoController : MonoBehaviour
         {
             maximum = Mathf.Min(maximum, regionHighlighter.MaxTimeMa);
         }
-        timeMa = Mathf.Round(Mathf.Clamp(value, 0f, maximum));
-        landRenderer?.SetTimeMa(timeMa);
-        terrainRenderer?.SetTimeMa(timeMa);
-        regionHighlighter?.SetTimeMa(timeMa);
+        return Mathf.Round(Mathf.Clamp(value, 0f, maximum));
     }
 
     public void SetTimelineScaleMode(TimelineScaleMode mode)
