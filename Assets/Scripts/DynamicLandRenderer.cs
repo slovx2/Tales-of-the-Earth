@@ -128,7 +128,7 @@ public sealed class DynamicLandRenderer : MonoBehaviour
         landMesh.UploadMeshData(false);
         stopwatch.Stop();
 
-        activeFrameIndex = frame.FrameIndex;
+        activeFrameIndex = requestedFrame;
         ActiveFrameTimeMa = frameTimeMa;
         ActiveVertexCount = frameVertexCount;
         ActiveTriangleCount = frameIndexCount / 3;
