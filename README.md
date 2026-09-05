@@ -37,6 +37,7 @@ uv run python Tools/build_runtime_regions.py
 - 右上角“重置视角（北极朝上）”或按 `R`：恢复默认缩放，并将北极对齐到屏幕正上方
 - 底部时间轴：按纪切换地质年代；下方短刻度表示世（不显示世名）
 - 时间轴支持“真实比例”和“年代等比例”两种显示模式，切换不会改变当前 Ma
+- 停在 `66 Ma`：单次播放75秒希克苏鲁伯撞击演出，结束保留坑体和全球烟尘；支持重新播放、进入／退出动画视角、单独隐藏烟尘及事件总开关。
 
 ## 工程索引
 
@@ -145,6 +146,7 @@ Unity 在拖动开始时切换到几何预览数据，地形保持正式精度�
 
 ## 文档
 
+- [希克苏鲁伯撞击动画、科学依据与独立事件层](docs/chicxulub-impact.md)
 - [地球模型、数据管线、渲染技术与数据来源](docs/earth-model-and-data-pipeline.md)
 - [地表与海深渲染设计](docs/terrain-rendering.md)
 - [古地形数据验证与推演可行性](docs/paleotopography-data-research.md)

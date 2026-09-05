@@ -1,0 +1,39 @@
+{
+  "event": "Chicxulub",
+  "event_time_ma": 66,
+  "modern_latitude_longitude": [
+    21.3,
+    -89.54
+  ],
+  "reconstructed_latitude_longitude": [
+    24.95931951408436,
+    -62.17533292403235
+  ],
+  "unity_unit_direction": [
+    0.42317490787082396,
+    0.8017857419393901,
+    0.421974669110913
+  ],
+  "plate_id": 205,
+  "plate_name": "Yucatan, Central America",
+  "feature_id": "GPlates-3e67ad08-6092-4da6-a288-348deeef946d",
+  "model": "MULLER2022 v1.2.4",
+  "anchor_plate_id": 0,
+  "is_exposed_land": false,
+  "inputs": [
+    {
+      "path": "Data/processed/gplates/muller2022/Rotations/1000_0_rotfile.rot",
+      "sha256": "9ab561d7185c268bca654246240d21189be8d8b85ae1344cac6854305a6f2624"
+    },
+    {
+      "path": "Data/processed/gplates/muller2022/StaticPolygons/shapes_static_polygons_Merdith_etal.gpml",
+      "sha256": "6775fdfc1a8d3e62c3c1105f5e824b7c04c70662ce668cf7abe71c25a12e7b52"
+    },
+    {
+      "path": "Data/processed/gplates/muller2022/Coastlines/shapes_coastlines_Merdith_etal.gpmlz",
+      "sha256": "e57285e77c96b2f40926c652b10d832f24933d214cdf1ce8ca40ff9f89d7e01a"
+    }
+  ],
+  "coordinate_source": "https://doi.org/10.1002/rog.20007",
+  "interpretation": "古坐标为当前板块模型的重建结果，不代表精确实测古经纬度。"
+}

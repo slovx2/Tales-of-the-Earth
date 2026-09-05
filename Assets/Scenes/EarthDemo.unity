@@ -183,9 +183,11 @@ Material:
     m_Floats:
     - _Emission: 0.07
     - _Smoothness: 0.48
+    - _SurfacePatchVisibility: 0
     m_Colors:
     - _DeepColor: {r: 0.01, g: 0.08, b: 0.24, a: 1}
     - _ShallowColor: {r: 0.025, g: 0.28, b: 0.62, a: 1}
+    - _SurfacePatch: {r: 0, g: 0, b: 1, a: 1}
     - _TerrainGrid: {r: 360, g: 180, b: 0.00278, a: 0.00556}
   m_BuildTextureStacks: []
 --- !u!1 &127409170
@@ -274,8 +276,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8c81cc9b2fc494862b1913cb86de08f6, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
+  m_Name:
+  m_EditorClassIdentifier:
   datasetRelativePath: EarthTerrain/terrain_frames.bin
   previewDatasetRelativePath: EarthTerrainPreview/terrain_frames.bin
   landRenderer: {fileID: 1438442868}
@@ -806,6 +808,79 @@ Transform:
   m_Children: []
   m_Father: {fileID: 127409178}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1001 &1953939508
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 5322521457345828452, guid: 5bece6f2488ce45e49cd02aaa8288762, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5322521457345828452, guid: 5bece6f2488ce45e49cd02aaa8288762, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5322521457345828452, guid: 5bece6f2488ce45e49cd02aaa8288762, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5322521457345828452, guid: 5bece6f2488ce45e49cd02aaa8288762, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5322521457345828452, guid: 5bece6f2488ce45e49cd02aaa8288762, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5322521457345828452, guid: 5bece6f2488ce45e49cd02aaa8288762, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5322521457345828452, guid: 5bece6f2488ce45e49cd02aaa8288762, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5322521457345828452, guid: 5bece6f2488ce45e49cd02aaa8288762, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5322521457345828452, guid: 5bece6f2488ce45e49cd02aaa8288762, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5322521457345828452, guid: 5bece6f2488ce45e49cd02aaa8288762, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6620114228351511787, guid: 5bece6f2488ce45e49cd02aaa8288762, type: 3}
+      propertyPath: earth
+      value:
+      objectReference: {fileID: 127409178}
+    - target: {fileID: 6620114228351511787, guid: 5bece6f2488ce45e49cd02aaa8288762, type: 3}
+      propertyPath: landRenderer
+      value:
+      objectReference: {fileID: 1438442868}
+    - target: {fileID: 6620114228351511787, guid: 5bece6f2488ce45e49cd02aaa8288762, type: 3}
+      propertyPath: oceanRenderer
+      value:
+      objectReference: {fileID: 127409175}
+    - target: {fileID: 8907227362520715906, guid: 5bece6f2488ce45e49cd02aaa8288762, type: 3}
+      propertyPath: m_Name
+      value: EarthEventLayer
+      objectReference: {fileID: 0}
+    - target: {fileID: 8913088974177321750, guid: 5bece6f2488ce45e49cd02aaa8288762, type: 3}
+      propertyPath: controller
+      value:
+      objectReference: {fileID: 127409171}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 5bece6f2488ce45e49cd02aaa8288762, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -813,3 +888,4 @@ SceneRoots:
   - {fileID: 965192859}
   - {fileID: 777481840}
   - {fileID: 127409178}
+  - {fileID: 1953939508}

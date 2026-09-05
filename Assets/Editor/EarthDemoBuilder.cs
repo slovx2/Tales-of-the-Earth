@@ -6,6 +6,7 @@ using UnityEngine.SceneManagement;
 
 public static class EarthDemoBuilder
 {
+    public static event System.Action<EarthDemoController> SceneCreated;
     [MenuItem("Earth Demo/Build Demo Scene")]
     public static void Build()
     {
@@ -138,6 +139,7 @@ public static class EarthDemoBuilder
         RenderSettings.ambientEquatorColor = new Color(0.01f, 0.02f, 0.05f);
         RenderSettings.ambientGroundColor = new Color(0.005f, 0.008f, 0.015f);
 
+        SceneCreated?.Invoke(controller);
         EditorSceneManager.SaveScene(SceneManager.GetActiveScene(), "Assets/Scenes/EarthDemo.unity");
         EditorBuildSettings.scenes = new[]
         {

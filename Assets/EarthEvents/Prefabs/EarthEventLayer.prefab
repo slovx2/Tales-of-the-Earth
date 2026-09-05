@@ -1,0 +1,71 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &8907227362520715906
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5322521457345828452}
+  - component: {fileID: 6620114228351511787}
+  - component: {fileID: 8913088974177321750}
+  m_Layer: 0
+  m_Name: EarthEventLayer
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5322521457345828452
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8907227362520715906}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &6620114228351511787
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8907227362520715906}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 44de90305da424c75a956c62ad35870b, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  definition: {fileID: 11400000, guid: 135b724b6e6f44cb8823fa1675777f5f, type: 2}
+  earth: {fileID: 0}
+  oceanRenderer: {fileID: 0}
+  landRenderer: {fileID: 0}
+  rockMaterial: {fileID: 2100000, guid: d5e081e5100b4444ca5cabcf3445dc13, type: 2}
+  smokeMaterial: {fileID: 2100000, guid: 8e0a8e457bdb04e12bec2557329dceb0, type: 2}
+  glowMaterial: {fileID: 2100000, guid: 42e150e219bff4bd3b7a72e55212ba93, type: 2}
+  waveMaterial: {fileID: 2100000, guid: 1d8db23b220c545f08a0074138ce0201, type: 2}
+  dustMaterial: {fileID: 2100000, guid: cd21259fc13264c0d89fa01719826c2b, type: 2}
+--- !u!114 &8913088974177321750
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8907227362520715906}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 173cc2e8f40b74a1f8ec61c0d52fe0e4, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  controller: {fileID: 0}
+  player: {fileID: 6620114228351511787}
+  eventsEnabled: 1

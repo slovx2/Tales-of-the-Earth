@@ -18,6 +18,8 @@ Shader "Earth/DynamicLand"
         _ClimateAvailable ("气候数据可用", Float) = 0
         _Emission ("环境光", Range(0, 1)) = 0.035
         _SurfaceOffset ("球面偏移", Range(1.0, 1.02)) = 1.003
+        _SurfacePatch ("局部表面方向与角半径余弦", Vector) = (0,0,1,1)
+        _SurfacePatchVisibility ("局部表面替换强度", Range(0,1)) = 0
     }
 
     SubShader
@@ -37,6 +39,7 @@ Shader "Earth/DynamicLand"
             #pragma target 3.0
             #include "UnityCG.cginc"
             #include "Lighting.cginc"
+            #include "SurfacePatch.cginc"
 
             fixed4 _ForestColor;
             fixed4 _GrassColor;
@@ -129,6 +132,7 @@ Shader "Earth/DynamicLand"
             fixed4 frag(v2f input) : SV_Target
             {
                 float3 sphere = normalize(input.spherePosition);
+                ClipSurfacePatch(sphere, input.position.xy);
                 // 运行时显示坐标将数学坐标的 Y 轴反射回来，保持高度场经度与陆地一致。
                 float longitude = atan2(-sphere.y, sphere.x);
                 float2 terrainUv = float2(longitude / 6.2831853 + 0.5,

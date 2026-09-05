@@ -57,6 +57,26 @@ public sealed class EarthDemoController : MonoBehaviour
     public float ActiveFrameTimeMa => landRenderer != null ? landRenderer.ActiveFrameTimeMa : -1f;
     public TimelineScaleMode CurrentTimelineScaleMode => timelineScaleMode;
 
+    // 通用观察接口：事件层只订阅状态，不参与地球数据加载。
+    public readonly struct TimelineState
+    {
+        public readonly float TimeMa;
+        public readonly bool IsDragging;
+        public readonly bool FormalFrameReady;
+        public TimelineState(float time, bool drag, bool ready)
+        { TimeMa = time; IsDragging = drag; FormalFrameReady = ready; }
+    }
+    public event System.Action<TimelineState> TimelineStateChanged;
+    public event System.Action ViewManipulated;
+    public readonly List<System.Func<Vector2, bool>> AdditionalUiHitTests =
+        new List<System.Func<Vector2, bool>>();
+    public TimelineState CurrentTimelineState => new TimelineState(timeMa, timelineDragging,
+        !timelineDragging && landRenderer != null && !landRenderer.IsPreviewMode &&
+        Mathf.Approximately(ActiveFrameTimeMa, timeMa) &&
+        (terrainRenderer == null || Mathf.Approximately(terrainRenderer.ActiveFrameTimeMa, timeMa)));
+    public Transform EarthTransform => earth;
+    public Camera ViewCamera => demoCamera;
+
     private void Awake()
     {
         demoCamera = Camera.main;
@@ -146,9 +166,13 @@ public sealed class EarthDemoController : MonoBehaviour
             float scroll = Input.mouseScrollDelta.y;
             if (Mathf.Abs(scroll) > 0.001f)
             {
-                Vector3 position = demoCamera.transform.position;
-                position.z = Mathf.Clamp(position.z - scroll * zoomSensitivity, -10f, -3.2f);
-                demoCamera.transform.position = position;
+                ViewManipulated?.Invoke();
+                // 沿当前观察射线缩放，保留近景构图的横向偏移，避免动画视角首次滚轮跳回远处。
+                Vector3 position = demoCamera.transform.position + demoCamera.transform.forward * scroll * zoomSensitivity;
+                Vector3 offset = position - earth.position;
+                float minimumDistance = earth.lossyScale.x * 0.5f * 1.12f;
+                demoCamera.transform.position = earth.position + offset.normalized *
+                    Mathf.Clamp(offset.magnitude, minimumDistance, 10f);
             }
         }
 
@@ -439,21 +463,24 @@ public sealed class EarthDemoController : MonoBehaviour
 
         hasPendingTimelineTime = !Mathf.Approximately(lastPrimaryAppliedTimeMa, pendingTimelineTimeMa) ||
                                  !Mathf.Approximately(lastRegionAppliedTimeMa, pendingTimelineTimeMa);
+        TimelineStateChanged?.Invoke(CurrentTimelineState);
     }
 
-    private void BeginTimelineDrag()
+    public void BeginTimelineDrag()
     {
         if (timelineDragging) return;
         timelineDragging = true;
         regionHighlighter?.ClearHover();
         landRenderer?.SetPreviewMode(true);
+        TimelineStateChanged?.Invoke(CurrentTimelineState);
     }
 
-    private void EndTimelineDrag()
+    public void EndTimelineDrag()
     {
         if (!timelineDragging) return;
         timelineDragging = false;
         landRenderer?.SetPreviewMode(false);
+        TimelineStateChanged?.Invoke(CurrentTimelineState);
     }
 
     private float ClampAndRoundTime(float value)
@@ -482,6 +509,7 @@ public sealed class EarthDemoController : MonoBehaviour
             return;
         }
         Vector3 rotationAxis = -delta.x * demoCamera.transform.up + delta.y * demoCamera.transform.right;
+        ViewManipulated?.Invoke();
         float rotationAngle = delta.magnitude * dragSensitivity;
         earth.rotation = Quaternion.AngleAxis(rotationAngle, rotationAxis.normalized) * earth.rotation;
     }
@@ -489,6 +517,7 @@ public sealed class EarthDemoController : MonoBehaviour
     /// <summary>将地理北极（数据坐标 +Z）对齐到屏幕上方，并恢复默认缩放。</summary>
     public void ResetView()
     {
+        ViewManipulated?.Invoke();
         if (earth != null && demoCamera != null)
         {
             earth.rotation = Quaternion.LookRotation(demoCamera.transform.up, -demoCamera.transform.forward);
@@ -549,8 +578,11 @@ public sealed class EarthDemoController : MonoBehaviour
         return builder.ToString();
     }
 
-    private static bool IsPointerOverUi(Vector3 mousePosition, float guiScale)
+    private bool IsPointerOverUi(Vector3 mousePosition, float guiScale)
     {
+        Vector2 screenPoint = new Vector2(mousePosition.x, Screen.height - mousePosition.y);
+        foreach (System.Func<Vector2, bool> hitTest in AdditionalUiHitTests)
+            if (hitTest(screenPoint)) return true;
         float guiWidth = Screen.width / guiScale;
         float guiHeight = Screen.height / guiScale;
         Vector2 guiPosition = new Vector2(mousePosition.x / guiScale, guiHeight - mousePosition.y / guiScale);
