@@ -16,6 +16,8 @@ Shader "Earth/DynamicLand"
         _ClimateClassTex ("Köppen 类别", 2D) = "black" {}
         _ClimateGrid ("气候网格", Vector) = (360, 180, 0.00278, 0.00556)
         _ClimateAvailable ("气候数据可用", Float) = 0
+        _ClimateBoundaryWarp ("气候过渡扰动（格）", Range(0, 0.3)) = 0.12
+        _ClimateBoundarySharpness ("气候边界清晰度（1为平滑版）", Range(1, 3)) = 3.0
         _Emission ("环境光", Range(0, 1)) = 0.035
         _SurfaceOffset ("球面偏移", Range(1.0, 1.02)) = 1.003
         _SurfacePatch ("局部表面方向与角半径余弦", Vector) = (0,0,1,1)
@@ -55,6 +57,7 @@ Shader "Earth/DynamicLand"
             sampler2D _ClimateClassTex;
             float4 _ClimateGrid;
             half _ClimateAvailable;
+            half _ClimateBoundaryWarp;
             half _Emission;
             half _SurfaceOffset;
 
@@ -119,6 +122,8 @@ Shader "Earth/DynamicLand"
                 return lerp(_SnowColor.rgb, _RockColor.rgb, 0.25); // ET
             }
 
+            #include "ClimateSampling.cginc"
+
             v2f vert(appdata input)
             {
                 v2f output;
@@ -148,22 +153,21 @@ Shader "Earth/DynamicLand"
                 float mountainSnow = highland * smoothstep(0.68, 0.90, elevationFactor) * 0.8;
                 float snow = saturate(mountainSnow);
 
-                // 气候场决定大陆尺度生物群系；FBM 仅保留为小尺度表面扰动。
-                fixed4 climate = tex2D(_ClimateTex, terrainUv);
-                fixed4 climateClass = tex2D(_ClimateClassTex, terrainUv);
-                float primary = floor(climateClass.r * 255.0 + 0.5);
-                float secondary = floor(climateClass.g * 255.0 + 0.5);
-                float transition = climateClass.b;
-                fixed3 climateLand = climateColor(primary);
-                fixed3 climateSecondary = climateColor(secondary);
-                climateLand = lerp(climateLand, climateSecondary, saturate(transition * 2.0));
-                float climateWeight = saturate(_ClimateAvailable) * step(0.003, climateClass.a) * saturate(climate.a + 0.15);
+                // 扰动限制在不足一个格子的范围，只软化视觉边界，不生成新的气候类别。
+                float2 boundaryNoise = float2(valueNoise(sphere * 72.0 + 17.3),
+                    valueNoise(sphere * 72.0 + 61.7)) * 2.0 - 1.0;
+                float2 climateUv = terrainUv + boundaryNoise * _ClimateBoundaryWarp * _ClimateGrid.zw;
+                ClimateSurface climateSurface = SampleClimateSurface(climateUv);
+                // 年降水量等连续数据超出 fixed 的移动端精度范围，保持 float 参与计算。
+                float4 climate = climateSurface.fields;
+                fixed3 climateLand = climateSurface.color;
+                float climateWeight = saturate(_ClimateAvailable) * climateSurface.coverage * saturate(climate.a + 0.15);
                 // 连续变量用于类别内的轻微修正，避免类别纹理呈完全平坦色块。
                 float wetness = saturate(climate.g / 2400.0);
                 climateLand = lerp(climateLand, climateLand * (0.88 + wetness * 0.12), climateWeight);
                 // 高海拔只提高裸岩和积雪权重，不改写 Köppen 主分类。
                 float climateColdness = saturate((8.0 - climate.r) / 18.0);
-                float climateSnow = step(1.5, primary) * max(smoothstep(0.45, 0.85, elevationFactor), climateColdness * 0.35);
+                float climateSnow = climateSurface.snowEligible * max(smoothstep(0.45, 0.85, elevationFactor), climateColdness * 0.35);
                 climateLand = lerp(climateLand, _SnowColor.rgb, climateSnow * 0.55);
                 // 没有气候帧时不再伪造大陆级气候纹理，只保留中性陆地、地形和细节扰动。
                 fixed3 neutralLand = lerp(_GrassColor.rgb, _DryGrassColor.rgb, 0.15);
