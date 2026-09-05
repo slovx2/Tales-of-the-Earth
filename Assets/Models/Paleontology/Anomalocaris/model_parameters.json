@@ -1,0 +1,11 @@
+{
+  "species": "Anomalocaris canadensis",
+  "version": "v02",
+  "reference_length_m": 0.25,
+  "supported_length_range_m": [0.25, 1.0],
+  "body_segments": 16,
+  "frontal_appendage_segments": 14,
+  "tail_fan_blades": 7,
+  "model_status": "medium_detail_smoothed_presentation_mesh",
+  "source_script": "generate_anomalocaris.py"
+}
