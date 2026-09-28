@@ -10,6 +10,14 @@
     "local": "Data/raw/gplates/Muller_etal_2022_SE_v1.2.4.zip",
     "timespan_ma": [0, 1000]
   },
+  "paleomap_paleodem": {
+    "url": "https://zenodo.org/api/records/5460860/files/Scotese_Wright_2018_Maps_1-88_6minX6min_PaleoDEMS_nc.zip/content",
+    "doi": "10.5281/zenodo.5460860",
+    "sha256": "ab360184d8260a815ef5ed6b8b4e0abdbf99ef5ee8aa87dfd070af323ceb42da",
+    "size_bytes": 207273848,
+    "local": ".local/research/paleodem/Scotese_Wright_2018_Maps_1-88_6minX6min_PaleoDEMS_nc.zip",
+    "role": "古地形校准与交叉验证参照；通过 Tools/download_paleodem.py 恢复"
+  },
   "pohl2022_foam_climate": {
     "url": "https://zenodo.org/api/records/6620748",
     "doi": "10.5281/zenodo.6620748",

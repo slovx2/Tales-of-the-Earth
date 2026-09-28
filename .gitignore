@@ -39,6 +39,7 @@
 # Python 本地环境与缓存
 /.venv/
 __pycache__/
+__pycache__.meta
 *.py[cod]
 /.pytest_cache/
 /.mypy_cache/
@@ -46,6 +47,14 @@ __pycache__/
 /.env
 /.env.*
 !/.env.example
+
+# 嵌套目录中的本机凭据不发布；示例配置仍可提交
+**/.env
+**/.env.*
+!**/.env.example
+*.p12
+*.pfx
+*.keystore
 
 # 离线管线可重建中间产物
 /Data/processed/
